@@ -57,6 +57,9 @@ spec:
       containers:
       - name: web
         image: nginx:alpine
+        volumeMounts:
+        - name: web-content
+          mountPath: /usr/share/nginx/html/index.html
         env:
         - name: NODE_NAME
           valueFrom:
@@ -75,7 +78,11 @@ spec:
             fieldRef:
               fieldPath: metadata.namespace
         ports:
-        - containerPort: 80
+         - containerPort: 80
+        volumes:
+         - name: web-content
+           configMap:
+             name: web-config
 ---
 apiVersion: v1
 kind: Service
