@@ -92,7 +92,7 @@ spec:
             </body>
             </html>" > /usr/share/nginx/html/index.html &&
                 nginx -g 'daemon off;'
-      ports:
+        ports:
         - containerPort: 80
 ---
 apiVersion: v1
