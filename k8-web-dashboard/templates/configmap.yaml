@@ -1,0 +1,62 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: web-dashboard-config
+data:
+  index.php: |
+    <?php
+      $node_name = getenv('NODE_NAME');
+      $pod_name = getenv('POD_NAME');
+      $host_ip = getenv('HOST_IP');
+      $namespace = getenv('NAMESPACE');
+    ?>
+    <!DOCTYPE html>
+    <html>
+      <head>
+        <title>Kubernetes Info Dashboard</title>
+        <style>
+          body {
+            font-family: 'Segoe UI', Arial, sans-serif;
+            text-align: center;
+            padding: 50px;
+            background: linear-gradient(45deg, #6a11cb 0%, #2575fc 100%);
+            color: #333;
+            margin: 0;
+            min-height: 100vh;
+          }
+          h1 {
+            color: white;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.2);
+            margin-bottom: 40px;
+            font-size: 2.5em;
+          }
+          .info {
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 15px;
+            box-shadow: 0 8px 32px rgba(0,0,0,0.1);
+            padding: 30px 50px;
+            display: inline-block;
+            text-align: left;
+            margin-top: 20px;
+          }
+          .info p {
+            margin: 20px 0;
+            font-size: 18px;
+            line-height: 1.6;
+          }
+          .info strong {
+            color: #2575fc;
+            font-size: 20px;
+          }
+        </style>
+      </head>
+      <body>
+        <h1>Kubernetes Pod Information</h1>
+        <div class='info'>
+          <p><strong>Node Name:</strong> <?php echo htmlspecialchars($node_name); ?></p>
+          <p><strong>Pod Name:</strong> <?php echo htmlspecialchars($pod_name); ?></p>
+          <p><strong>Node IP:</strong> <?php echo htmlspecialchars($host_ip); ?></p>
+          <p><strong>Namespace:</strong> <?php echo htmlspecialchars($namespace); ?></p>
+        </div>
+      </body>
+    </html>
