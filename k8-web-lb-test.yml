@@ -1,3 +1,66 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: web-dashboard-config
+data:
+  index.php: |
+    <?php
+      $node_name = getenv('NODE_NAME');
+      $pod_name = getenv('POD_NAME');
+      $host_ip = getenv('HOST_IP');
+      $namespace = getenv('NAMESPACE');
+    ?>
+    <!DOCTYPE html>
+    <html>
+      <head>
+        <title>Kubernetes Info Dashboard</title>
+        <style>
+          body {
+            font-family: 'Segoe UI', Arial, sans-serif;
+            text-align: center;
+            padding: 50px;
+            background: linear-gradient(45deg, #6a11cb 0%, #2575fc 100%);
+            color: #333;
+            margin: 0;
+            min-height: 100vh;
+          }
+          h1 {
+            color: white;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.2);
+            margin-bottom: 40px;
+            font-size: 2.5em;
+          }
+          .info {
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 15px;
+            box-shadow: 0 8px 32px rgba(0,0,0,0.1);
+            padding: 30px 50px;
+            display: inline-block;
+            text-align: left;
+            margin-top: 20px;
+          }
+          .info p {
+            margin: 20px 0;
+            font-size: 18px;
+            line-height: 1.6;
+          }
+          .info strong {
+            color: #2575fc;
+            font-size: 20px;
+          }
+        </style>
+      </head>
+      <body>
+        <h1>Kubernetes Pod Information</h1>
+        <div class='info'>
+          <p><strong>Node Name:</strong> <?php echo htmlspecialchars($node_name); ?></p>
+          <p><strong>Pod Name:</strong> <?php echo htmlspecialchars($pod_name); ?></p>
+          <p><strong>Node IP:</strong> <?php echo htmlspecialchars($host_ip); ?></p>
+          <p><strong>Namespace:</strong> <?php echo htmlspecialchars($namespace); ?></p>
+        </div>
+      </body>
+    </html>
+---
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -14,9 +77,15 @@ spec:
       labels:
         app: web
     spec:
+      volumes:
+      - name: web-content
+        configMap:
+          name: web-dashboard-config
       containers:
       - name: web
-        image: nginx:alpine
+        image: webdevops/php-nginx:8.3-alpine
+        ports:
+        - containerPort: 80
         env:
         - name: NODE_NAME
           valueFrom:
@@ -34,66 +103,10 @@ spec:
           valueFrom:
             fieldRef:
               fieldPath: metadata.namespace
-        command:
-        - sh
-        - -c
-        - |
-          echo "<html>
-            <head>
-              <title>Welcome to Kubernetes Info Dashboard</title>
-              <style>
-                body {
-                  font-family: 'Segoe UI', Arial, sans-serif;
-                  text-align: center;
-                  padding: 50px;
-                  background: linear-gradient(45deg, #6a11cb 0%, #2575fc 100%);
-                  color: #333;
-                  margin: 0;
-                  min-height: 100vh;
-                }
-                h1 {
-                  color: white;
-                  text-shadow: 2px 2px 4px rgba(0,0,0,0.2);
-                  margin-bottom: 40px;
-                  font-size: 2.5em;
-                }
-                .info {
-                  background: rgba(255, 255, 255, 0.95);
-                  border-radius: 15px;
-                  box-shadow: 0 8px 32px rgba(0,0,0,0.1);
-                  padding: 30px 50px;
-                  display: inline-block;
-                  text-align: left;
-                  margin-top: 20px;
-                  transition: transform 0.3s ease;
-                }
-                .info:hover {
-                  transform: translateY(-5px);
-                }
-                .info p {
-                  margin: 20px 0;
-                  font-size: 18px;
-                  line-height: 1.6;
-                }
-                .info strong {
-                  color: #2575fc;
-                  font-size: 20px;
-                }
-              </style>
-            </head>
-            <body>
-              <h1>Kubernetes Pod Dashboard</h1>
-              <div class='info'>
-                <p><strong> Node Name:</strong> $NODE_NAME</p>
-                <p><strong> Pod Name:</strong> $POD_NAME</p>
-                <p><strong> Node IP:</strong> $HOST_IP</p>
-                <p><strong> Namespace:</strong> $NAMESPACE</p>
-              </div>
-            </body>
-            </html>" > /usr/share/nginx/html/index.html &&
-                nginx -g 'daemon off;'
-        ports:
-        - containerPort: 80
+        volumeMounts:
+        - name: web-content
+          mountPath: /app/index.php
+          subPath: index.php
 ---
 apiVersion: v1
 kind: Service
@@ -106,8 +119,7 @@ spec:
   selector:
     app: web
   ports:
-  - name: http
-    protocol: TCP
+  - protocol: TCP
     port: 80
     targetPort: 80
     nodePort: 30081
