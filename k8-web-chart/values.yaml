@@ -1,0 +1,22 @@
+replicaCount: 3
+
+image:
+  repository: webdevops/php-nginx
+  tag: "8.3-alpine"
+  pullPolicy: IfNotPresent
+
+service:
+  type: NodePort
+  port: 80
+  nodePort: 30081
+
+configMap:
+  name: web-dashboard-config
+
+resources:
+  limits:
+    cpu: 100m
+    memory: 128Mi
+  requests:
+    cpu: 100m
+    memory: 128Mi

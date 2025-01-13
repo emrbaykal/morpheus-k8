@@ -1,0 +1,5 @@
+apiVersion: v2
+name: k8-web-chart
+description: PHP Web Application for Kubernetes Info
+version: 0.1.0
+appVersion: "1.0.0"
