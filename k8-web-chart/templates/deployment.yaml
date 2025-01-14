@@ -5,7 +5,7 @@ metadata:
   labels:
     app: {{ template "k8-web-chart.name" . }}
 spec:
-  replicas: {{ .Values.replicaCount }}
+  replicas: 3
   selector:
     matchLabels:
       app: {{ template "k8-web-chart.name" . }}
@@ -17,11 +17,11 @@ spec:
       volumes:
       - name: web-content
         configMap:
-          name: {{ template "k8-web-chart.fullname" . }}-config
+          name: config--{{ template "k8-web-chart.fullname" . }}
       containers:
       - name: {{ .Chart.Name }}
-        image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
-        imagePullPolicy: {{ .Values.image.pullPolicy }}
+        image: webdevops/php-nginx:8.3-alpine
+        imagePullPolicy: IfNotPresent
         ports:
         - containerPort: 80
         env:
@@ -46,4 +46,9 @@ spec:
           mountPath: /app/index.php
           subPath: index.php
         resources:
-          {{- toYaml .Values.resources | nindent 12 }}
+          limits:
+            cpu: 100m
+            memory: 128Mi
+          requests:
+            cpu: 100m
+            memory: 128Mi

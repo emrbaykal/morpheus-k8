@@ -5,11 +5,11 @@ metadata:
   labels:
     app: {{ template "k8-web-chart.name" . }}
 spec:
-  type: {{ .Values.service.type }}
+  type: NodePort
   ports:
-    - port: {{ .Values.service.port }}
+    - port: 80
       targetPort: 80
-      nodePort: {{ .Values.service.nodePort }}
+      nodePort: 30081
       protocol: TCP
   selector:
     app: {{ template "k8-web-chart.name" . }}

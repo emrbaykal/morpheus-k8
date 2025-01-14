@@ -1,7 +1,7 @@
 apiVersion: v1
 kind: ConfigMap
 metadata:
-  name: {{ template "k8-web-chart.fullname" . }}-config
+  name: config--{{ template "k8-web-chart.fullname" . }}
 data:
   index.php: |
     <?php
