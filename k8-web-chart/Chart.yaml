@@ -1,5 +1,6 @@
 apiVersion: v2
 name: k8-web-chart
-description: PHP Web Application for Kubernetes Info
+description:  PHP Web Application for Kubernetes Info
+type: application
 version: 0.1.0
-appVersion: "1.0.0"
+appVersion: "1.16.0"

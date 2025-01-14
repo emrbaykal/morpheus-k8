@@ -1,27 +1,27 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: web-deployment
+  name: {{ template "k8-web-chart.fullname" . }}
   labels:
-    app: web
+    app: {{ template "k8-web-chart.name" . }}
 spec:
-  replicas: 3
+  replicas: {{ .Values.replicaCount }}
   selector:
     matchLabels:
-      app: web
+      app: {{ template "k8-web-chart.name" . }}
   template:
     metadata:
       labels:
-        app: web
+        app: {{ template "k8-web-chart.name" . }}
     spec:
-   #   volumes:
-   #   - name: web-content
-   #     configMap:
-   #       name: web-dashboard-config
+      volumes:
+      - name: web-content
+        configMap:
+          name: {{ template "k8-web-chart.fullname" . }}-config
       containers:
-      - name: web
-        image: webdevops/php-nginx:8.3-alpine
-        imagePullPolicy: IfNotPresent
+      - name: {{ .Chart.Name }}
+        image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
+        imagePullPolicy: {{ .Values.image.pullPolicy }}
         ports:
         - containerPort: 80
         env:
@@ -41,14 +41,9 @@ spec:
           valueFrom:
             fieldRef:
               fieldPath: metadata.namespace
-      #  volumeMounts:
-      #  - name: web-content
-      #    mountPath: /app/index.php
-      #    subPath: index.php
+        volumeMounts:
+        - name: web-content
+          mountPath: /app/index.php
+          subPath: index.php
         resources:
-          limits:
-            cpu: 100m
-            memory: 128Mi
-          requests:
-            cpu: 100m
-            memory: 128Mi
+          {{- toYaml .Values.resources | nindent 12 }}
