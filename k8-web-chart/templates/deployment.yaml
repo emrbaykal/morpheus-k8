@@ -1,25 +1,25 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: {{ template "k8-web-chart.fullname" . }}
+  name: web-deployment
   labels:
-    app: {{ template "k8-web-chart.name" . }}
+    app: web
 spec:
   replicas: 3
   selector:
     matchLabels:
-      app: {{ template "k8-web-chart.name" . }}
+      app: web
   template:
     metadata:
       labels:
-        app: {{ template "k8-web-chart.name" . }}
+        app: web
     spec:
       volumes:
       - name: web-content
         configMap:
-          name: config--{{ template "k8-web-chart.fullname" . }}
+          name: web-dashboard-config
       containers:
-      - name: {{ .Chart.Name }}
+      - name: web
         image: webdevops/php-nginx:8.3-alpine
         imagePullPolicy: IfNotPresent
         ports:
