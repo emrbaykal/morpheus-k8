@@ -1,0 +1,12 @@
+name: voting-app
+version: 0.1.0
+description: A Helm chart for deploying a voting web service with a database.
+maintainers:
+  - name: Emre Baykal
+    email: emre.baykal@hpe.com
+keywords:
+  - voting
+  - helm
+  - kubernetes
+  - web service
+  - database
