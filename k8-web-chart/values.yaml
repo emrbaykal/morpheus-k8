@@ -9,12 +9,10 @@ image:
 
 # This is for setting up a service more information can be found here: https://kubernetes.io/docs/concepts/services-networking/service/
 service:
-  #type: NodePort
-  type: LoadBalancer
+  type: NodePort
   port: 80
   targetPort: 80
-  loadBalancerIP: 10.15.100.254
-  #nodePort: 30081
+  nodePort: 31081
 
 resources:
   limits:
