@@ -3,7 +3,7 @@ kind: Service
 metadata:
   labels:
     app: redis
-  name: {{ template "voting-app.fullname" . }}-redis-service
+  name: {{ template "voting-app.fullname" . }-redis-service
 spec:
   type: {{ .Values.redis.service.type }}
   ports:
