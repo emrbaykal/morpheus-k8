@@ -2,17 +2,17 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   labels:
-    app: {{ .Values.database.name }}
+    app: db
   name: {{ template "voting-app.fullname" . }}-db
 spec:
   replicas: {{ .Values.database.replicas }}
   selector:
     matchLabels:
-      app: {{ .Values.database.name }}
+      app: db
   template:
     metadata:
       labels:
-        app: {{ .Values.database.name }}
+        app: db
     spec:
       containers:
       - image: {{ .Values.database.image.repository }}:{{ .Values.database.image.tag }}
