@@ -3,7 +3,7 @@ kind: Service
 metadata:
   labels:
     app: db
-  name: db
+  name: {{ template "voting-app.fullname" . }}-postgres-service
 spec:
   type: {{ .Values.database.service.type }}
   ports:
