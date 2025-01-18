@@ -1,16 +1,13 @@
 worker:
-  name: {{ template "voting-app.fullname" . }}-worker
   replicas: 1
   image:
     repository: dockersamples/examplevotingapp_worker
 
 vote:
-  name: {{ template "voting-app.fullname" . }}-vote
   replicas: 1
   image:
     repository: dockersamples/examplevotingapp_vote
   service:
-    name: {{ template "voting-app.fullname" . }}-vote-service
     type: NodePort
     port: 8080
     targetPort: 80
@@ -18,36 +15,30 @@ vote:
 
 
 result:
-  name: {{ template "voting-app.fullname" . }}-result
   replicas: 1
   image:
     repository: dockersamples/examplevotingapp_result
   service:
-    name: {{ template "voting-app.fullname" . }}-result-service
     type: NodePort
     port: 8081
     targetPort: 80
     nodePort: 31001
 
 redis:
-  name: {{ template "voting-app.fullname" . }}-redis
   replicas: 1
   image:
     repository: redis
     tag: alpine
   service:
-    name: {{ template "voting-app.fullname" . }}-redis-service
     type: ClusterIP
     port: 6379
     targetPort: 6379
   storage:
-    claimname: {{ template "voting-app.fullname" . }}-redis-pvc
     classname: nfs-csi
     size: 1Gi
 
 
 database:
-  name: {{ template "voting-app.fullname" . }}-db
   replicas: 1
   image:
     repository: postgres
@@ -56,11 +47,9 @@ database:
     username: postgres
     password: postgres
   service:
-    name: {{ template "voting-app.fullname" . }}-db-service
     type: ClusterIP
     port: 5432
     targetPort: 5432
   storage:
-    claimname: {{ template "voting-app.fullname" . }}-database-pvc
     classname: nfs-csi
     size: 1Gi
