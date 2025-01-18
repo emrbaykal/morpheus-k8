@@ -3,11 +3,11 @@ kind: Service
 metadata:
   labels:
     app: result
-  name: {{ template "voting-app.fullname" . }}-result-service
+  name: result-service
 spec:
   type: {{ .Values.result.service.type }}
   ports:
-  - name: {{ template "voting-app.fullname" . }}-result-service
+  - name: result-service
     port: {{ .Values.result.service.port }}
     targetPort: {{ .Values.result.service.targetPort }}
     nodePort: {{ .Values.result.service.nodePort }}

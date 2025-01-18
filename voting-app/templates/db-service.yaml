@@ -3,11 +3,11 @@ kind: Service
 metadata:
   labels:
     app: db
-  name: {{ template "voting-app.fullname" . }}-postgres-service
+  name: postgres-service
 spec:
   type: {{ .Values.database.service.type }}
   ports:
-  - name: {{ template "voting-app.fullname" . }}-postgres-service
+  - name: postgres-service
     port: {{ .Values.database.service.port }}
     targetPort: {{ .Values.database.service.targetPort }}
   selector:
