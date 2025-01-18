@@ -1,7 +1,7 @@
 apiVersion: v1
 kind: PersistentVolumeClaim
 metadata:
-  name: {{ .Values.database.storage.claimname }}
+  name: {{ template "voting-app.fullname" . }}-db-pvc
 spec:
   accessModes:
     - ReadWriteOnce

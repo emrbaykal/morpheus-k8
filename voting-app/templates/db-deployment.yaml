@@ -2,21 +2,21 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   labels:
-    app: {{ template "voting-app.fullname" . }}-db
-  name: {{ template "voting-app.fullname" . }}-db
+    app: db
+  name: {{ template "voting-app.fullname" . }}-postgres
 spec:
   replicas: {{ .Values.database.replicas }}
   selector:
     matchLabels:
-      app: {{ template "voting-app.fullname" . }}-db
+      app: db
   template:
     metadata:
       labels:
-        app: {{ template "voting-app.fullname" . }}-db
+        app: db
     spec:
       containers:
       - image: {{ .Values.database.image.repository }}:{{ .Values.database.image.tag }}
-        name: postgres
+        name: {{ template "voting-app.fullname" . }}-postgres
         env:
         - name: POSTGRES_USER
           value: {{ .Values.database.credentials.username }}

@@ -16,4 +16,4 @@ spec:
     spec:
       containers:
       - image: {{ .Values.worker.image.repository }}
-        name: worker
+        name: {{ template "voting-app.fullname" . }}-worker
