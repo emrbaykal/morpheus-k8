@@ -7,7 +7,7 @@ metadata:
 spec:
   type: {{ .Values.result.service.type }}
   ports:
-  - name: {{ .Values.result.service.name }}
+  - name: {{ template "voting-app.fullname" . }}-result-service
     port: {{ .Values.result.service.port }}
     targetPort: {{ .Values.result.service.targetPort }}
     nodePort: {{ .Values.result.service.nodePort }}

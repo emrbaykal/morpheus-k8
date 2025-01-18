@@ -3,7 +3,7 @@ kind: Deployment
 metadata:
   labels:
     app: redis
-  name: {{ .Values.redis.name }}
+  name: {{ template "voting-app.fullname" . }}-redis
 spec:
   replicas: {{ .Values.redis.replicas }}
   selector:
@@ -16,7 +16,7 @@ spec:
     spec:
       containers:
       - image: {{ .Values.redis.image.repository }}:{{ .Values.redis.image.tag }}
-        name: {{ .Values.redis.name }}
+        name: {{ template "voting-app.fullname" . }}-redis
         ports:
         - containerPort: 6379
           name: redis

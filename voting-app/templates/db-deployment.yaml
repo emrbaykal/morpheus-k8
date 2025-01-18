@@ -2,17 +2,17 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   labels:
-    app: {{ .Values.database.name }}
-  name: {{ .Values.database.name }}
+    app: {{ template "voting-app.fullname" . }}-db
+  name: {{ template "voting-app.fullname" . }}-db
 spec:
   replicas: {{ .Values.database.replicas }}
   selector:
     matchLabels:
-      app: {{ .Values.database.name }}
+      app: {{ template "voting-app.fullname" . }}-db
   template:
     metadata:
       labels:
-        app: {{ .Values.database.name }}
+        app: {{ template "voting-app.fullname" . }}-db
     spec:
       containers:
       - image: {{ .Values.database.image.repository }}:{{ .Values.database.image.tag }}
@@ -31,4 +31,4 @@ spec:
       volumes:
         - name: db-data
           persistentVolumeClaim:
-            claimName: {{ .Values.database.storage.claimname }}
+            claimName: {{ template "voting-app.fullname" . }}-database-pvc
