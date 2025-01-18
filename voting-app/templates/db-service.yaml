@@ -7,7 +7,7 @@ metadata:
 spec:
   type: {{ .Values.database.service.type }}
   ports:
-  - name: {{ template "voting-app.fullname" . }}-db-service
+  - name: {{ template "voting-app.fullname" . }}-postgres-service
     port: {{ .Values.database.service.port }}
     targetPort: {{ .Values.database.service.targetPort }}
   selector:

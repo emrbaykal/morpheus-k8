@@ -31,4 +31,4 @@ spec:
       volumes:
         - name: db-data
           persistentVolumeClaim:
-            claimName: {{ template "voting-app.fullname" . }}-database-pvc
+            claimName: {{ template "voting-app.fullname" . }}-postgres-pvc
