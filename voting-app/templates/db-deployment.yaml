@@ -3,7 +3,7 @@ kind: Deployment
 metadata:
   labels:
     app: {{ .Values.database.name }}
-  name: {{ .Values.database.name }}
+  name: {{ template "voting-app.fullname" . }}-db
 spec:
   replicas: {{ .Values.database.replicas }}
   selector:

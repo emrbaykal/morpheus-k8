@@ -3,7 +3,7 @@ kind: Deployment
 metadata:
   labels:
     app: result
-  name: {{ .Values.result.name }}
+  name: {{ template "voting-app.fullname" . }}-result
 spec:
   replicas: {{ .Values.result.replicas }}
   selector:
