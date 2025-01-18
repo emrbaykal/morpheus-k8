@@ -3,11 +3,11 @@ kind: Service
 metadata:
   labels:
     app: result
-  name: result-service
+  name: result
 spec:
   type: {{ .Values.result.service.type }}
   ports:
-  - name: result
+  - name: {{ .Values.result.service.name }}
     port: {{ .Values.result.service.port }}
     targetPort: {{ .Values.result.service.targetPort }}
     nodePort: {{ .Values.result.service.nodePort }}

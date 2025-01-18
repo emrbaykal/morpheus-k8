@@ -2,13 +2,15 @@ apiVersion: v1
 kind: Service
 metadata:
   labels:
-    app: redis
-  name: redis-service
+    app: result
+  name: result
 spec:
-  type: {{ .Values.redis.service.type }}
+  type: {{ .Values.result.service.type }}
   ports:
-  - name: redis
-    port: {{ .Values.redis.service.port }}
-    targetPort: {{ .Values.redis.service.targetPort }}
+  - name: {{ .Values.result.service.name }}
+    port: {{ .Values.result.service.port }}
+    targetPort: {{ .Values.result.service.targetPort }}
+    nodePort: {{ .Values.result.service.nodePort }}
   selector:
-    app: redis
+    app: result
+

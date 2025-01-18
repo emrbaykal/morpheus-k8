@@ -3,7 +3,7 @@ kind: Deployment
 metadata:
   labels:
     app: result
-  name: {{ template "voting-app.fullname" . }}-result
+  name: {{ .Values.result.name }}
 spec:
   replicas: {{ .Values.result.replicas }}
   selector:
@@ -16,7 +16,7 @@ spec:
     spec:
       containers:
       - image: {{ .Values.result.image.repository }}
-        name: result
+        name: {{ .Values.result.name }}
         ports:
         - containerPort: 80
           name: result

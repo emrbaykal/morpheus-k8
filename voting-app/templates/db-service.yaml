@@ -3,11 +3,11 @@ kind: Service
 metadata:
   labels:
     app: db
-  name: postgres-service
+  name: db
 spec:
   type: {{ .Values.database.service.type }}
   ports:
-  - name: postgres
+  - name: {{ .Values.database.service.name }}
     port: {{ .Values.database.service.port }}
     targetPort: {{ .Values.database.service.targetPort }}
   selector:

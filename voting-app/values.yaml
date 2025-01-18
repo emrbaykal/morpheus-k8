@@ -1,9 +1,11 @@
 worker:
+  name: worker
   replicas: 1
   image:
     repository: dockersamples/examplevotingapp_worker
 
 vote:
+  name: vote
   replicas: 1
   image:
     repository: dockersamples/examplevotingapp_vote
@@ -16,6 +18,7 @@ vote:
 
 
 result:
+  name: result
   replicas: 1
   image:
     repository: dockersamples/examplevotingapp_result
@@ -27,6 +30,7 @@ result:
     nodePort: 31001
 
 redis:
+  name: redis
   replicas: 1
   image:
     repository: redis
@@ -37,12 +41,13 @@ redis:
     port: 6379
     targetPort: 6379
   storage:
-    classname: nfs-csi
     claimname: redis-pvc
+    classname: nfs-csi
     size: 1Gi
 
 
 database:
+  name: db
   replicas: 1
   image:
     repository: postgres
@@ -56,6 +61,6 @@ database:
     port: 5432
     targetPort: 5432
   storage:
-    classname: nfs-csi
     claimname: database-pvc
+    classname: nfs-csi
     size: 1Gi
