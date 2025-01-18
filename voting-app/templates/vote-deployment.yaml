@@ -16,7 +16,7 @@ spec:
     spec:
       containers:
       - image: {{ .Values.vote.image.repository }}
-        name: {{ template "voting-app.fullname" . }}-vote
+        name: vote
         ports:
         - containerPort: 80
           name: vote

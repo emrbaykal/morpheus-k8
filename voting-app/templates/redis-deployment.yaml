@@ -16,7 +16,7 @@ spec:
     spec:
       containers:
       - image: {{ .Values.redis.image.repository }}:{{ .Values.redis.image.tag }}
-        name: {{ template "voting-app.fullname" . }}-redis
+        name: {{ .Values.redis.name }}
         ports:
         - containerPort: 6379
           name: redis
@@ -26,4 +26,5 @@ spec:
       volumes:
         - name: redis-data
           persistentVolumeClaim:
-            claimName: {{ template "voting-app.fullname" . }}-redis-pvc
+            claimName: {{ .Values.redis.storage.claimname }}
+

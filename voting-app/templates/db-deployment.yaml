@@ -16,7 +16,7 @@ spec:
     spec:
       containers:
       - image: {{ .Values.database.image.repository }}:{{ .Values.database.image.tag }}
-        name: {{ template "voting-app.fullname" . }}-postgres
+        name: postgres
         env:
         - name: POSTGRES_USER
           value: {{ .Values.database.credentials.username }}
@@ -31,4 +31,4 @@ spec:
       volumes:
         - name: db-data
           persistentVolumeClaim:
-            claimName: {{ template "voting-app.fullname" . }}-postgres-pvc
+            claimName: {{ .Values.database.storage.claimname }}

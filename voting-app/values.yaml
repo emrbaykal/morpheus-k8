@@ -8,6 +8,7 @@ vote:
   image:
     repository: dockersamples/examplevotingapp_vote
   service:
+    name: vote-service
     type: NodePort
     port: 8080
     targetPort: 80
@@ -19,6 +20,7 @@ result:
   image:
     repository: dockersamples/examplevotingapp_result
   service:
+    name: result-service
     type: NodePort
     port: 8081
     targetPort: 80
@@ -30,11 +32,13 @@ redis:
     repository: redis
     tag: alpine
   service:
+    name: redis-service
     type: ClusterIP
     port: 6379
     targetPort: 6379
   storage:
     classname: nfs-csi
+    claimname: redis-pvc
     size: 1Gi
 
 
@@ -47,9 +51,11 @@ database:
     username: postgres
     password: postgres
   service:
+    name: db-service
     type: ClusterIP
     port: 5432
     targetPort: 5432
   storage:
     classname: nfs-csi
+    claimname: database-pvc
     size: 1Gi

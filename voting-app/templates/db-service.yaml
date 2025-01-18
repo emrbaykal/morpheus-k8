@@ -7,7 +7,7 @@ metadata:
 spec:
   type: {{ .Values.database.service.type }}
   ports:
-  - name: postgres-service
+  - name: postgres
     port: {{ .Values.database.service.port }}
     targetPort: {{ .Values.database.service.targetPort }}
   selector:
