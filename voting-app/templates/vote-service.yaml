@@ -4,6 +4,7 @@ metadata:
   labels:
     app: vote
   name: {{ .Values.vote.name }}
+  
 spec:
   type: {{ .Values.vote.service.type }}
   ports:

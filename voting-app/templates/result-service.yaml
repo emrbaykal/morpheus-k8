@@ -11,5 +11,6 @@ spec:
     port: {{ .Values.result.service.port }}
     targetPort: {{ .Values.result.service.targetPort }}
     nodePort: {{ .Values.result.service.nodePort }}
+    nodePort: 31001
   selector:
     app: result
