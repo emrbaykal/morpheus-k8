@@ -11,6 +11,6 @@ spec:
       targetPort: 80
      # nodePort: {{ .Values.service.nodePort }}
       protocol: TCP
-      externalTrafficPolicy: Local
+  externalTrafficPolicy: Local
   selector:
     app: {{ template "k8-web-chart.name" . }}
