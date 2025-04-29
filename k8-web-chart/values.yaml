@@ -9,7 +9,7 @@ image:
 
 # This is for setting up a service more information can be found here: https://kubernetes.io/docs/concepts/services-networking/service/
 service:
-  type: NodePort
+  type: LoadBalancer
   port: 80
   targetPort: 80
   nodePort: 31081

@@ -9,7 +9,7 @@ spec:
   ports:
     - port: {{ .Values.service.port }}
       targetPort: 80
-      nodePort: {{ .Values.service.nodePort }}
+     # nodePort: {{ .Values.service.nodePort }}
       protocol: TCP
   selector:
     app: {{ template "k8-web-chart.name" . }}
