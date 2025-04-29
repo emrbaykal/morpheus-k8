@@ -111,7 +111,7 @@ kind: Service
 metadata:
   name: web-service
   annotations:
-    # Annotations for external HAProxy integration
+    # Annotations for external HAProxy integrationß
     external-dns.alpha.kubernetes.io/hostname: haproxy.hpelab.local
     # Optional: Use service.beta.kubernetes.io/external-traffic annotation if needed
     service.beta.kubernetes.io/external-traffic: "Local"
