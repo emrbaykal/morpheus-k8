@@ -5,7 +5,6 @@ metadata:
 data:
   index.php: |
     <?php
-      $node_name = getenv('NODE_NAME');
       $pod_name = getenv('POD_NAME');
       $host_ip = getenv('HOST_IP');
       $namespace = getenv('NAMESPACE');
@@ -53,7 +52,6 @@ data:
       <body>
         <h1>Kubernetes Pod Information</h1>
         <div class='info'>
-          <p><strong>Node Name:</strong> <?php echo htmlspecialchars($node_name); ?></p>
           <p><strong>Pod Name:</strong> <?php echo htmlspecialchars($pod_name); ?></p>
           <p><strong>Node IP:</strong> <?php echo htmlspecialchars($host_ip); ?></p>
           <p><strong>Namespace:</strong> <?php echo htmlspecialchars($namespace); ?></p>
@@ -112,6 +110,11 @@ apiVersion: v1
 kind: Service
 metadata:
   name: web-service
+  annotations:
+    # Annotations for external HAProxy integration
+    external-dns.alpha.kubernetes.io/hostname: haproxy.hpelab.local
+    # Optional: Use service.beta.kubernetes.io/external-traffic annotation if needed
+    service.beta.kubernetes.io/external-traffic: "Local"
   labels:
     app: web
 spec:
