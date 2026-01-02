@@ -62,5 +62,5 @@ database:
     targetPort: 5432
   storage:
     claimname: database-pvc
-    classname: nfs-csi
+    classname: rook-ceph-block
     size: 1Gi
