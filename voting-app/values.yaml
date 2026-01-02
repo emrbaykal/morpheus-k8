@@ -42,7 +42,7 @@ redis:
     targetPort: 6379
   storage:
      claimname: redis-pvc
-     classname: nfs-csi
+     classname: rook-ceph-block
      size: 1Gi
 
 
