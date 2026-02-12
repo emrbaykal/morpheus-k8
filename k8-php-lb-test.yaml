@@ -65,7 +65,7 @@ metadata:
   name: web-deployment
   labels:
     app: web
-spec:
+spec: 
   replicas: 3
   selector:
     matchLabels:
