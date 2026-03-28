@@ -1,0 +1,362 @@
+# KEYCLOAK NAMESPACE
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: keycloak
+  labels:
+    app.kubernetes.io/part-of: sso-stack
+
+# SECRET — Admin + DB passwords
+apiVersion: v1
+kind: Secret
+metadata:
+  name: keycloak-secret
+  namespace: keycloak
+type: Opaque
+data:
+  admin-password: SFAxbnYzbnQh
+  db-password: SFAxbnYzbnQh
+
+---
+# PERSISTENTVOLUMECLAIM — PostgreSQL data
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: postgres-pvc
+  namespace: keycloak
+spec:
+  accessModes:
+    - ReadWriteOnce
+  #storageClassName: rook-ceph-block
+  resources:
+    requests:
+      storage: 10Gi
+
+---
+# POSTGRESQL DEPLOYMENT
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: postgres
+  namespace: keycloak
+  labels:
+    app: postgres
+    app.kubernetes.io/part-of: sso-stack
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: postgres
+  template:
+    metadata:
+      labels:
+        app: postgres
+    spec:
+      containers:
+        - name: postgres
+          image: postgres:17
+          env:
+            - name: POSTGRES_USER
+              value: keycloak
+            - name: POSTGRES_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: keycloak-secret
+                  key: db-password
+            - name: POSTGRES_DB
+              value: keycloak
+            - name: POSTGRES_LOG_STATEMENT
+              value: all
+            - name: PGDATA
+              value: /var/lib/postgresql/data/pgdata
+          ports:
+            - name: postgres
+              containerPort: 5432
+          volumeMounts:
+            - name: postgres-data
+              mountPath: /var/lib/postgresql/data
+          readinessProbe:
+            exec:
+              command: ["pg_isready", "-U", "keycloak"]
+            initialDelaySeconds: 10
+            periodSeconds: 5
+            failureThreshold: 6
+          livenessProbe:
+            exec:
+              command: ["pg_isready", "-U", "keycloak"]
+            initialDelaySeconds: 30
+            periodSeconds: 10
+          resources:
+            requests:
+              memory: 256Mi
+              cpu: 100m
+            limits:
+              memory: 512Mi
+              cpu: 500m
+      volumes:
+        - name: postgres-data
+          persistentVolumeClaim:
+            claimName: postgres-pvc
+
+---
+# POSTGRESQL SERVICE
+apiVersion: v1
+kind: Service
+metadata:
+  name: postgres
+  namespace: keycloak
+  labels:
+    app: postgres
+spec:
+  type: ClusterIP
+  selector:
+    app: postgres
+  ports:
+    - name: postgres
+      protocol: TCP
+      port: 5432
+      targetPort: 5432
+
+---
+# KEYCLOAK CLUSTER-INTERNAL SERVICE (HTTP + HTTPS)
+apiVersion: v1
+kind: Service
+metadata:
+  name: keycloak
+  namespace: keycloak
+  labels:
+    app: keycloak
+spec:
+  type: ClusterIP
+  selector:
+    app: keycloak
+  ports:
+    - name: http
+      protocol: TCP
+      port: 8080
+      targetPort: http
+    - name: https
+      protocol: TCP
+      port: 8443
+      targetPort: https
+
+---
+# KEYCLOAK HEADLESS SERVICE — Infinispan cluster discovery
+apiVersion: v1
+kind: Service
+metadata:
+  name: keycloak-discovery
+  namespace: keycloak
+  labels:
+    app: keycloak
+spec:
+  type: ClusterIP
+  clusterIP: None
+  selector:
+    app: keycloak
+  ports:
+    - name: jgroups
+      port: 7800
+      targetPort: 7800
+
+---
+# KEYCLOAK NODEPORT SERVICE — External access (HTTP + HTTPS)
+apiVersion: v1
+kind: Service
+metadata:
+  name: keycloak-nodeport
+  namespace: keycloak
+  labels:
+    app: keycloak
+spec:
+  type: NodePort
+  selector:
+    app: keycloak
+  ports:
+    - name: http
+      protocol: TCP
+      port: 8080
+      targetPort: http
+      nodePort: 30080
+    - name: https
+      protocol: TCP
+      port: 8443
+      targetPort: https
+      nodePort: 30443
+
+---
+# KEYCLOAK STATEFULSET
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: keycloak
+  namespace: keycloak
+  labels:
+    app: keycloak
+    app.kubernetes.io/part-of: sso-stack
+spec:
+  serviceName: keycloak-discovery
+  replicas: 2
+  selector:
+    matchLabels:
+      app: keycloak
+  template:
+    metadata:
+      labels:
+        app: keycloak
+    spec:
+      initContainers:
+        # --- 1. Wait for PostgreSQL to be ready ---
+        - name: wait-for-postgres
+          image: busybox:1.36
+          command:
+            - sh
+            - -c
+            - |
+              until nc -z postgres 5432; do
+                echo "Waiting for PostgreSQL..."
+                sleep 3
+              done
+              echo "PostgreSQL is ready. Starting Keycloak."
+
+        # --- 2. Generate self-signed TLS certificate ---
+        # Alpine image includes openssl; writes cert to emptyDir volume.
+        - name: generate-tls-cert
+          image: alpine:3.19
+          command:
+            - sh
+            - -c
+            - |
+              echo "Installing openssl..."
+              apk add --no-cache openssl
+              echo "Generating TLS certificate..."
+              openssl req -x509 -nodes -days 3650 -newkey rsa:2048 \
+                -keyout /certs/tls.key \
+                -out    /certs/tls.crt \
+                -subj   "/CN=keycloak-morpheus-lab/O=Lab/C=TR"
+              chmod 644 /certs/tls.key /certs/tls.crt
+              echo "Certificate generated successfully:"
+              openssl x509 -in /certs/tls.crt -noout -subject -dates
+          volumeMounts:
+            - name: tls-certs
+              mountPath: /certs
+
+      containers:
+        - name: keycloak
+          image: quay.io/keycloak/keycloak:26.5.6
+          args:
+            - start
+          env:
+            # --- Admin credentials ---
+            - name: KC_BOOTSTRAP_ADMIN_USERNAME
+              value: admin
+            - name: KC_BOOTSTRAP_ADMIN_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: keycloak-secret
+                  key: admin-password
+
+            # --- Database ---
+            - name: KC_DB
+              value: postgres
+            - name: KC_DB_URL_HOST
+              value: postgres
+            - name: KC_DB_URL_DATABASE
+              value: keycloak
+            - name: KC_DB_USERNAME
+              value: keycloak
+            - name: KC_DB_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: keycloak-secret
+                  key: db-password
+
+            # --- HTTP (kept enabled for internal access) ---
+            - name: KC_HTTP_ENABLED
+              value: "true"
+            - name: KC_PROXY_HEADERS
+              value: xforwarded
+            - name: KC_HOSTNAME_STRICT
+              value: "false"
+
+            # --- HTTPS — use certificate generated by initContainer ---
+            - name: KC_HTTPS_CERTIFICATE_FILE
+              value: /opt/keycloak/certs/tls.crt
+            - name: KC_HTTPS_CERTIFICATE_KEY_FILE
+              value: /opt/keycloak/certs/tls.key
+
+            # --- Clustering: Infinispan ---
+            - name: KC_CACHE
+              value: ispn
+            - name: POD_IP
+              valueFrom:
+                fieldRef:
+                  fieldPath: status.podIP
+            - name: KC_CACHE_EMBEDDED_NETWORK_BIND_ADDRESS
+              value: $(POD_IP)
+
+            # --- Health ---
+            - name: KC_HEALTH_ENABLED
+              value: "true"
+
+            # --- Features ---
+            - name: KC_FEATURES
+              value: token-exchange
+
+            # --- Logging ---
+            - name: KC_LOG_LEVEL
+              value: INFO
+
+          ports:
+            - name: http
+              containerPort: 8080
+            - name: https
+              containerPort: 8443
+            - name: jgroups
+              containerPort: 7800
+            - name: jgroups-fd
+              containerPort: 57800
+
+          volumeMounts:
+            # Read certificate generated by initContainer
+            - name: tls-certs
+              mountPath: /opt/keycloak/certs
+              readOnly: true
+
+          startupProbe:
+            httpGet:
+              path: /health/started
+              port: 9000
+              scheme: HTTPS
+            periodSeconds: 1
+            failureThreshold: 600
+
+          readinessProbe:
+            httpGet:
+              path: /health/ready
+              port: 9000
+              scheme: HTTPS
+            periodSeconds: 10
+            failureThreshold: 3
+
+          livenessProbe:
+            httpGet:
+              path: /health/live
+              port: 9000
+              scheme: HTTPS
+            periodSeconds: 10
+            failureThreshold: 3
+
+          resources:
+            requests:
+              memory: 1700Mi
+              cpu: 500m
+            limits:
+              memory: 2000Mi
+              cpu: 2000m
+
+      volumes:
+        # Temporary volume for self-signed TLS certificate
+        # initContainer writes → main container reads
+        - name: tls-certs
+          emptyDir: {}
