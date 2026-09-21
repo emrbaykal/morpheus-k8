@@ -6,6 +6,7 @@ metadata:
   labels:
     app.kubernetes.io/part-of: sso-stack
 
+---
 # SECRET — Admin + DB passwords
 apiVersion: v1
 kind: Secret
@@ -27,7 +28,7 @@ metadata:
 spec:
   accessModes:
     - ReadWriteOnce
-  #storageClassName: rook-ceph-block
+  storageClassName: rook-ceph-block
   resources:
     requests:
       storage: 10Gi
