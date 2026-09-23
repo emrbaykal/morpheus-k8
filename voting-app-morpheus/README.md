@@ -7,8 +7,7 @@ fed by one Spec Template, and the tiers set the start order.
 ```
 Database  (boot order 0)  db, redis
 Backend   (boot order 1)  worker
-Frontend  (boot order 2)  vote  -> NodePort 31000
-                          result -> NodePort 31001
+Frontend  (boot order 2)  vote, result  -> NodePorts chosen on the order form
 ```
 
 ## Files
@@ -18,52 +17,73 @@ Frontend  (boot order 2)  vote  -> NodePort 31000
 | `specs/01-db.yaml` | `voting-app-db` | PVC, Deployment `db` (postgres:15-alpine), Service `db` |
 | `specs/02-redis.yaml` | `voting-app-redis` | PVC, Deployment `redis` (redis:alpine), Service `redis` |
 | `specs/03-worker.yaml` | `voting-app-worker` | Deployment `worker` |
-| `specs/04-vote.yaml` | `voting-app-vote` | Deployment `vote`, NodePort Service 31000 |
-| `specs/05-result.yaml` | `voting-app-result` | Deployment `result`, NodePort Service 31001 |
+| `specs/04-vote.yaml` | `voting-app-vote` | Deployment `vote`, NodePort Service (port from the form) |
+| `specs/05-result.yaml` | `voting-app-result` | Deployment `result`, NodePort Service (port from the form) |
 | `blueprint.yaml` | — | The Morpheus blueprint (Raw tab / API body) |
+| `catalog/` | — | App Spec of the catalog item and the option list scripts |
 
 ## Differences from the Helm chart
 
-- No templating: plain manifests, values written in place.
+- No Helm templating. The only variables are `<%= customOptions.* %>` tags for NodePorts,
+  storage class and size, filled by Morpheus from the catalog form.
 - Service and Deployment names are fixed (`db`, `redis`, `vote`, `result`, `worker`). The images
-  hard-code the host names `db` and `redis`, so all five instances must land in the same namespace.
+  hard-code the host names `db` and `redis`, so all five instances of one copy share a namespace and each copy needs its own namespace.
 - The postgres user/password stay `postgres`/`postgres` — the worker and result images hard-code them.
 - `strategy: Recreate` on db and redis so a rollout does not deadlock on the RWO volume.
 - The duplicate `nodePort` key in the chart's `result-service.yaml` is gone.
-- NodePorts are fixed, so only one copy of the app can run per cluster.
 
 ## Setup
 
 1. **Library > Templates > Spec Templates > + Add** — one per file above. Type `Kubernetes Spec`,
    Source `Repository`, repository `morpheus-k8`, path `voting-app-morpheus/specs/<file>`, ref `main`.
-2. **Library > Blueprints > App Blueprints > + Add** — type `Morpheus`. Either build it in the
-   Builder (tiers and instances as in the diagram, instance type `Kubernetes`, layout
-   `Kubernetes Deployment`, Kube Spec = the matching template) or paste `blueprint.yaml` in the Raw
-   tab after replacing the spec template ids and the cloud name.
-3. **Provisioning > Apps > + Add** — pick the blueprint, group and the Kubernetes cloud, choose the
-   target namespace, complete.
-4. Open `http://<node-ip>:31000` to vote and `http://<node-ip>:31001` for the results.
-
-The vote and result instances carry their address as the instance description and as an
-environment variable (`VOTE_URL`, `RESULT_URL`, Runtime tab), pointing at `haproxy.hpetrlab.local`,
-the planned load balancer name.
+2. **Library > Blueprints > App Blueprints > + Add** — type `Morpheus`, paste `blueprint.yaml` in
+   the Raw tab after replacing the spec template ids.
+3. Create the four option lists (scripts in `catalog/`), the form **Voting App** and the catalog
+   item **Voting App** (type Blueprint, App Spec = `catalog/appspec.yaml`). See *Service Catalog*.
+4. Order from the catalog. The vote and result instances show their address as the instance
+   description and as an environment variable (`VOTE_URL`, `RESULT_URL`, Runtime tab), pointing at
+   `haproxy.hpetrlab.local`, the planned load balancer name.
 
 Deleting the App in Morpheus removes all five instances and their Kubernetes objects.
 
 ## Service Catalog
 
-The blueprint is also a catalog item: **Voting App** (type Blueprint). The only form field is
-*App Name* (input `Voting App Name`, `appName`, lowercase/digits/dashes). `catalog-appspec.yaml` is
-the item's App Spec: group, environment, cloud and namespace are fixed there; everything else comes
-from the blueprint.
+The blueprint is ordered through the catalog item **Voting App** (type Blueprint, form
+**Voting App**). Several copies can run side by side, one per namespace.
 
-- UI: Catalog -> Voting App -> enter App Name -> Order.
-- CLI: `morpheus catalog add-order -t "Voting App" -O config.appName=<name> -N`
-- API: `POST /api/catalog/orders` with
-  `{"order":{"items":[{"type":{"name":"Voting App"},"config":{"customOptions":{"appName":"<name>"}}}]}}`
-  (add `?validate=true` for a dry run).
+| Form field | Goes to |
+|---|---|
+| App Name | App name, prefix of the five instance names |
+| Kubernetes Cluster | Cloud of every instance (option list value = the cluster's cloud id) |
+| Environment | App environment |
+| Namespace | Resource pool of every instance; lists namespaces named `voting-*` of the chosen cluster |
+| Vote NodePort / Result NodePort | `nodePort` in `04-vote.yaml` / `05-result.yaml`, instance description and `VOTE_URL` / `RESULT_URL` |
+| Storage Class / Storage Size (GB) | `storageClassName` and size of both PVCs in `01-db.yaml` / `02-redis.yaml` |
 
-Because the NodePorts are fixed, only one order can be running at a time.
+Files under `catalog/`: `appspec.yaml` (the item's App Spec) and the translation scripts of the four
+option lists (clusters, environments, namespaces, storage classes).
+
+Before ordering, create the namespace (named `voting-*`) on the cluster, active and visible to the
+group, and pick two free NodePorts.
+
+- UI: Catalog -> Voting App -> fill the form -> Order.
+- API: `POST /api/catalog/orders` (add `?validate=true` for a dry run):
+  `{"order":{"items":[{"type":{"name":"Voting App"},"config":{"customOptions":{"appName":"voting-two","cluster":"3","environment":"qa","namespace":"pool-21","votePort":"31010","resultPort":"31011","storageClass":"rook-ceph-block","storageSize":"2"}}}]}}`
+- CLI: `morpheus catalog add-order --payload order.json -N` with the body above. The `-O` form of
+  `add-order` does not work here: the CLI resolves the dependent Namespace / Storage Class lists
+  without the cluster and drops the values ("Namespace is required").
+
+How the values travel (all verified 2026-09-23 on 9.0.2):
+
+- Form values reach the App Spec (`<%= customOptions.x %>`), but **not** the instances'
+  `config.customOptions`. The App Spec therefore copies each value an instance's spec template needs
+  into that instance's `config.customOptions`.
+- Spec templates render `<%= customOptions.x %>` from the instance's `config.customOptions`;
+  `${...}` is left as literal text.
+- `instance.cloud` in the App Spec takes the plain cloud id. `cloud: {id: x}` and a top-level
+  `defaultCloud` are rejected with "Could not find the selected cloud".
+- The blueprint's instance config is not scoped to a cloud, so one blueprint serves every cluster. A
+  cloud-scoped config is only applied when the App Spec names that cloud.
 
 ## Verified on the lab appliance (Morpheus 9.0.2, 2026-09-23)
 
