@@ -1,0 +1,21 @@
+# Morpheus App Blueprint (type: morpheus) for the Kubernetes info page (k8-web-chart rebuilt).
+# One instance of the built-in Kubernetes instance type fed by three single-document Spec
+# Templates (ConfigMap, Deployment, Service). Replace <ID_...> with the Spec Template ids.
+# The specs contain <%= customOptions.* %> tags filled from the catalog form, so deploy this
+# blueprint through the "K8s Web Info" catalog item.
+name: K8s Web Info
+type: morpheus
+description: PHP page showing node, pod, node IP and namespace of each Kubernetes pod
+category: kubernetes
+tiers:
+  Web:
+    tier:
+      bootOrder: 0
+    instances:
+      - instance: {type: kubernetesSpec, name: '${app.name}-web', layout: {id: 155, code: kube-1.0-single}}
+        plan: {id: 16, code: internal-custom-kubernetes}
+        config:
+          resourceSpecTemplateId:
+            - {id: <ID_CONFIGMAP>, value: <ID_CONFIGMAP>, name: k8-web-configmap}
+            - {id: <ID_DEPLOYMENT>, value: <ID_DEPLOYMENT>, name: k8-web-deployment}
+            - {id: <ID_SERVICE>, value: <ID_SERVICE>, name: k8-web-service}

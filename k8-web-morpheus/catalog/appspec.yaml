@@ -1,0 +1,18 @@
+# App Spec of the "K8s Web Info" catalog item (type Blueprint -> blueprint "K8s Web Info",
+# form "K8s Web Info"). Form values are copied into the instance's config.customOptions,
+# which is where the spec templates read them.
+name: <%= customOptions.appName %>
+group:
+  name: All Clouds
+environment: <%= customOptions.environment %>
+tiers:
+  Web:
+    instances:
+      - instance:
+          type: kubernetesSpec
+          cloud: <%= customOptions.cluster %>
+          description: 'Web UI: http://apps.hpetrlab.local:<%= customOptions.nodePort %>'
+        config:
+          resourcePoolId: '<%= customOptions.namespace %>'
+          customOptions: {appName: '<%= customOptions.appName %>', nodePort: '<%= customOptions.nodePort %>', replicas: '<%= customOptions.replicas %>'}
+        evars: [{name: WEB_URL, value: 'http://apps.hpetrlab.local:<%= customOptions.nodePort %>', export: false}]
