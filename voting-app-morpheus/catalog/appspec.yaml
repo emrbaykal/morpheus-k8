@@ -1,0 +1,33 @@
+# App Spec of the "Voting App" catalog item (type Blueprint -> blueprint "Voting App", form "Voting App").
+# Deploy-time choices come from the form (customOptions.*); spec templates and instance names come
+# from the blueprint. The same customOptions are also rendered inside the spec templates
+# (ports, storage class, storage size).
+name: <%= customOptions.appName %>
+group:
+  name: All Clouds
+environment: dev
+tiers:
+  Database:
+    instances:
+      - instance: {type: kubernetesSpec, cloud: Local K8s Cloud}
+        config: {resourcePoolId: '<%= customOptions.namespace %>'}
+      - instance: {type: kubernetesSpec, cloud: Local K8s Cloud}
+        config: {resourcePoolId: '<%= customOptions.namespace %>'}
+  Backend:
+    instances:
+      - instance: {type: kubernetesSpec, cloud: Local K8s Cloud}
+        config: {resourcePoolId: '<%= customOptions.namespace %>'}
+  Frontend:
+    instances:
+      - instance:
+          type: kubernetesSpec
+          cloud: Local K8s Cloud
+          description: 'Voting UI: http://haproxy.hpetrlab.local:<%= customOptions.votePort %>'
+        config: {resourcePoolId: '<%= customOptions.namespace %>'}
+        evars: [{name: VOTE_URL, value: 'http://haproxy.hpetrlab.local:<%= customOptions.votePort %>', export: false}]
+      - instance:
+          type: kubernetesSpec
+          cloud: Local K8s Cloud
+          description: 'Results UI: http://haproxy.hpetrlab.local:<%= customOptions.resultPort %>'
+        config: {resourcePoolId: '<%= customOptions.namespace %>'}
+        evars: [{name: RESULT_URL, value: 'http://haproxy.hpetrlab.local:<%= customOptions.resultPort %>', export: false}]

@@ -1,15 +1,16 @@
 # Spec Template: voting-app-redis
 # Vote queue. Service name "redis" is hard-coded in the vote and worker images.
+# storageClass / storageSize come from the catalog form (Morpheus renders the template tags at deploy time).
 apiVersion: v1
 kind: PersistentVolumeClaim
 metadata:
   name: redis-data
 spec:
   accessModes: ["ReadWriteOnce"]
-  storageClassName: rook-ceph-block
+  storageClassName: <%= customOptions.storageClass %>
   resources:
     requests:
-      storage: 1Gi
+      storage: <%= customOptions.storageSize %>Gi
 ---
 apiVersion: apps/v1
 kind: Deployment

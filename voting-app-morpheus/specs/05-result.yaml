@@ -1,5 +1,5 @@
 # Spec Template: voting-app-result
-# Results UI, reads from db. NodePort 31001.
+# Results UI, reads from db. NodePort from the catalog form (resultPort).
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -37,4 +37,4 @@ spec:
     - name: http
       port: 8081
       targetPort: 80
-      nodePort: 31001
+      nodePort: <%= customOptions.resultPort %>

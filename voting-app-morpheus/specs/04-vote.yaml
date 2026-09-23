@@ -1,5 +1,5 @@
 # Spec Template: voting-app-vote
-# Voting UI, writes to redis. NodePort 31000.
+# Voting UI, writes to redis. NodePort from the catalog form (votePort).
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -37,4 +37,4 @@ spec:
     - name: http
       port: 8080
       targetPort: 80
-      nodePort: 31000
+      nodePort: <%= customOptions.votePort %>

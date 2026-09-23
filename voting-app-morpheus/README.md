@@ -44,11 +44,46 @@ Frontend  (boot order 2)  vote  -> NodePort 31000
    target namespace, complete.
 4. Open `http://<node-ip>:31000` to vote and `http://<node-ip>:31001` for the results.
 
+The vote and result instances carry their address as the instance description and as an
+environment variable (`VOTE_URL`, `RESULT_URL`, Runtime tab), pointing at `haproxy.hpetrlab.local`,
+the planned load balancer name.
+
 Deleting the App in Morpheus removes all five instances and their Kubernetes objects.
 
-## Known limit
+## Service Catalog
 
-Creating a Spec Template over the REST API with local content fails with
-`403 You do not have permissions to access this api endpoint` when the content has a line starting
-with `--` (every multi-document YAML). The UI is not affected. Use repository source, or the UI,
-for multi-document specs. Observed on Morpheus 9.0.2, 2026-09-23.
+The blueprint is also a catalog item: **Voting App** (type Blueprint). The only form field is
+*App Name* (input `Voting App Name`, `appName`, lowercase/digits/dashes). `catalog-appspec.yaml` is
+the item's App Spec: group, environment, cloud and namespace are fixed there; everything else comes
+from the blueprint.
+
+- UI: Catalog -> Voting App -> enter App Name -> Order.
+- CLI: `morpheus catalog add-order -t "Voting App" -O config.appName=<name> -N`
+- API: `POST /api/catalog/orders` with
+  `{"order":{"items":[{"type":{"name":"Voting App"},"config":{"customOptions":{"appName":"<name>"}}}]}}`
+  (add `?validate=true` for a dry run).
+
+Because the NodePorts are fixed, only one order can be running at a time.
+
+## Verified on the lab appliance (Morpheus 9.0.2, 2026-09-23)
+
+Deployed twice into namespace `voting-app` of `HKS LOCAL CLS` - once over the API, once from the UI
+wizard - both times all five instances `running`, vote UI and result UI answer 200 on 31000/31001. Three things the docs do not
+say, all found on the way:
+
+1. **Spec Template ids are objects.** In the instance config, `resourceSpecTemplateId` must be
+   `[{id: 220, value: 220, name: ...}]` (the `value` key is what the Builder needs to show the
+   selection). A plain `[220]` (what `morpheus apps add` generates) saves fine but
+   fails at provision time with `No such property: id for class: java.lang.Integer`
+   (`KubernetesProvisionService.loadContainerSpecTemplates`).
+2. **The `ONE_GIGABYTE` error in the log is noise.** Every Kubernetes Spec instance that carries a
+   volume (the Builder always adds a 0 GB root volume) logs
+   `assign storage volumes error: No such property: ONE_GIGABYTE for class: com.morpheus.MorpheusUtils`
+   - a 9.0.2 defect - but provisioning carries on and the instance reaches `running`. Do not chase it
+   when an instance fails; look for the next error. Confirmed by a UI deploy of this blueprint.
+3. **Multi-document specs cannot be created over the API.** `POST/PUT /api/library/spec-templates`
+   (and `morpheus library-spec-templates add`) answer `403 You do not have permissions to access
+   this api endpoint` when the content - local or fetched from the repository - has a line starting
+   with `--`. The UI is not affected, so create the Spec Templates in the UI.
+
+An environment must be chosen when the App is created (the appliance requires one).

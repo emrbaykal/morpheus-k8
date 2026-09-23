@@ -15,6 +15,7 @@ deployment on the lab Kubernetes clusters built through Morpheus (see the `morph
 | `k8-php-lb-test.yaml`, `applications/k8-php-lb-test.yaml` | Identical copies. ConfigMap with `index.php` (pod name, node IP, namespace), Deployment `web-deployment` (3 × `webdevops/php-nginx:8.3-alpine`, downward-API env), NodePort Service 30081 |
 | `k8-web-chart/` | Helm chart of the same PHP app, adds `NODE_NAME` and resource limits, NodePort 31081 |
 | `voting-app/` | Helm chart of the Docker example voting app (dockersamples vote/result/worker, `redis:alpine`, `postgres:15-alpine`), NodePorts 31000/31001, PVCs on `rook-ceph-block` |
+| `voting-app-morpheus/` | The same app as a Morpheus-type App Blueprint: five Kubernetes Spec instances in three tiers (Database, Backend, Frontend), one spec file each under `specs/`. Deployed and verified on the lab appliance 2026-09-23 (9.0.2); the README carries the three provisioning gotchas |
 | `sso-k8s/keycloak/keycloak.yaml` | Namespace `keycloak`, Secret, PostgreSQL 17 + 10Gi PVC, Keycloak 26.5.6 StatefulSet (2 replicas, Infinispan via headless `keycloak-discovery`, self-signed cert from an init container, `token-exchange` feature), NodePort 30080/30443 |
 | `namespace-optionlist.js` | Morpheus Option List translation script: keeps active namespaces whose `description` equals `input.accountId`, returns `{name, value: id}`; empty list for the placeholder case, throws when a real tenant has no match |
 
