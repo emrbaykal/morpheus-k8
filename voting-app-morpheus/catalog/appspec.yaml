@@ -27,16 +27,16 @@ tiers:
       - instance:
           type: kubernetesSpec
           cloud: <%= customOptions.cluster %>
-          description: 'Voting UI: http://haproxy.hpetrlab.local:<%= customOptions.votePort %>'
+          description: 'Voting UI: http://apps.hpetrlab.local:<%= customOptions.votePort %>'
         config:
           resourcePoolId: '<%= customOptions.namespace %>'
           customOptions: {votePort: '<%= customOptions.votePort %>'}
-        evars: [{name: VOTE_URL, value: 'http://haproxy.hpetrlab.local:<%= customOptions.votePort %>', export: false}]
+        evars: [{name: VOTE_URL, value: 'http://apps.hpetrlab.local:<%= customOptions.votePort %>', export: false}]
       - instance:
           type: kubernetesSpec
           cloud: <%= customOptions.cluster %>
-          description: 'Results UI: http://haproxy.hpetrlab.local:<%= customOptions.resultPort %>'
+          description: 'Results UI: http://apps.hpetrlab.local:<%= customOptions.resultPort %>'
         config:
           resourcePoolId: '<%= customOptions.namespace %>'
           customOptions: {resultPort: '<%= customOptions.resultPort %>'}
-        evars: [{name: RESULT_URL, value: 'http://haproxy.hpetrlab.local:<%= customOptions.resultPort %>', export: false}]
+        evars: [{name: RESULT_URL, value: 'http://apps.hpetrlab.local:<%= customOptions.resultPort %>', export: false}]

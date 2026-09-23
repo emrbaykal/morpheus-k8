@@ -42,7 +42,9 @@ Frontend  (boot order 2)  vote, result  -> NodePorts chosen on the order form
    item **Voting App** (type Blueprint, App Spec = `catalog/appspec.yaml`). See *Service Catalog*.
 4. Order from the catalog. The vote and result instances show their address as the instance
    description and as an environment variable (`VOTE_URL`, `RESULT_URL`, Runtime tab), pointing at
-   `haproxy.hpetrlab.local`, the planned load balancer name.
+   `apps.hpetrlab.local` (a DNS A record on the Morpheus HA HAProxy, 192.168.42.107, kept separate from
+   the Morpheus UI name so browsers do not upgrade it to HTTPS). That HAProxy forwards every NodePort (30000-32767) to the cluster
+   nodes - see `Morpheus Development/workflow/haproxy-k8s-nodeports.cfg`.
 
 Deleting the App in Morpheus removes all five instances and their Kubernetes objects.
 
@@ -57,15 +59,15 @@ over the API on 2026-09-23 (Morpheus 9.0.2).
 | App Name | App name, prefix of the five instance names |
 | Kubernetes Cluster | Cloud of every instance (option list value = the cluster's cloud id) |
 | Environment | App environment |
-| Namespace | Resource pool of every instance; lists namespaces named `voting-*` of the chosen cluster |
+| Namespace | Resource pool of every instance; lists every namespace of the chosen cluster the ordering user may use |
 | Vote NodePort / Result NodePort | `nodePort` in `04-vote.yaml` / `05-result.yaml`, instance description and `VOTE_URL` / `RESULT_URL` |
 | Storage Class / Storage Size (GB) | `storageClassName` and size of both PVCs in `01-db.yaml` / `02-redis.yaml` |
 
 Files under `catalog/`: `appspec.yaml` (the item's App Spec) and the translation scripts of the four
 option lists (clusters, environments, namespaces, storage classes).
 
-Before ordering, create the namespace (named `voting-*`) on the cluster, active and visible to the
-group, and pick two free NodePorts.
+Before ordering, make sure the target namespace exists on the cluster (active and visible to the
+group) and holds no other copy, and pick two free NodePorts.
 
 - UI: Catalog -> Voting App -> fill the form -> Order.
 - API: `POST /api/catalog/orders` (add `?validate=true` for a dry run):
