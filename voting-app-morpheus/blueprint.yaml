@@ -1,0 +1,51 @@
+# Morpheus App Blueprint (type: morpheus) for the voting app.
+# DRAFT - the instance config shape is not yet verified on the appliance.
+# Replace <ID_...> with the Spec Template ids created from specs/*.yaml.
+name: Voting App
+type: morpheus
+description: Docker example voting app on Kubernetes, one Morpheus instance per component
+category: kubernetes
+tiers:
+  Database:
+    linkedTiers: [Backend, Frontend]
+    tier:
+      bootOrder: 0
+    instances:
+      - instance: {type: kubernetesSpec, name: '${app.name}-db'}
+        clouds:
+          Local K8s Cloud:
+            instance: {layout: {code: kube-1.0-single}}
+            plan: {code: internal-custom-kubernetes}
+            config: {resourceSpecTemplateId: [<ID_DB>]}
+      - instance: {type: kubernetesSpec, name: '${app.name}-redis'}
+        clouds:
+          Local K8s Cloud:
+            instance: {layout: {code: kube-1.0-single}}
+            plan: {code: internal-custom-kubernetes}
+            config: {resourceSpecTemplateId: [<ID_REDIS>]}
+  Backend:
+    tier:
+      bootOrder: 1
+    instances:
+      - instance: {type: kubernetesSpec, name: '${app.name}-worker'}
+        clouds:
+          Local K8s Cloud:
+            instance: {layout: {code: kube-1.0-single}}
+            plan: {code: internal-custom-kubernetes}
+            config: {resourceSpecTemplateId: [<ID_WORKER>]}
+  Frontend:
+    tier:
+      bootOrder: 2
+    instances:
+      - instance: {type: kubernetesSpec, name: '${app.name}-vote'}
+        clouds:
+          Local K8s Cloud:
+            instance: {layout: {code: kube-1.0-single}}
+            plan: {code: internal-custom-kubernetes}
+            config: {resourceSpecTemplateId: [<ID_VOTE>]}
+      - instance: {type: kubernetesSpec, name: '${app.name}-result'}
+        clouds:
+          Local K8s Cloud:
+            instance: {layout: {code: kube-1.0-single}}
+            plan: {code: internal-custom-kubernetes}
+            config: {resourceSpecTemplateId: [<ID_RESULT>]}

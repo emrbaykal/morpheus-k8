@@ -1,0 +1,40 @@
+# Spec Template: voting-app-vote
+# Voting UI, writes to redis. NodePort 31000.
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: vote
+  labels:
+    app: vote
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: vote
+  template:
+    metadata:
+      labels:
+        app: vote
+    spec:
+      containers:
+        - name: vote
+          image: dockersamples/examplevotingapp_vote
+          ports:
+            - containerPort: 80
+              name: http
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: vote
+  labels:
+    app: vote
+spec:
+  type: NodePort
+  selector:
+    app: vote
+  ports:
+    - name: http
+      port: 8080
+      targetPort: 80
+      nodePort: 31000

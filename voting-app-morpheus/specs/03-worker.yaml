@@ -1,0 +1,21 @@
+# Spec Template: voting-app-worker
+# Moves votes from redis into db. No Service: nothing connects to it.
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: worker
+  labels:
+    app: worker
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: worker
+  template:
+    metadata:
+      labels:
+        app: worker
+    spec:
+      containers:
+        - name: worker
+          image: dockersamples/examplevotingapp_worker

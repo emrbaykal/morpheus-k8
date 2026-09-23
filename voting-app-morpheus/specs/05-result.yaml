@@ -1,0 +1,40 @@
+# Spec Template: voting-app-result
+# Results UI, reads from db. NodePort 31001.
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: result
+  labels:
+    app: result
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: result
+  template:
+    metadata:
+      labels:
+        app: result
+    spec:
+      containers:
+        - name: result
+          image: dockersamples/examplevotingapp_result
+          ports:
+            - containerPort: 80
+              name: http
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: result
+  labels:
+    app: result
+spec:
+  type: NodePort
+  selector:
+    app: result
+  ports:
+    - name: http
+      port: 8081
+      targetPort: 80
+      nodePort: 31001
