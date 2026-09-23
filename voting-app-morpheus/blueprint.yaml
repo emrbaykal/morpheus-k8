@@ -1,7 +1,7 @@
 # Morpheus App Blueprint (type: morpheus) for the voting app.
 # Replace <ID_...> with the Spec Template ids created from specs/*.yaml.
-# Shape matches what the Blueprint Builder saves (spec entries carry id + value + name).
-# Namespace (resource pool) is chosen when the App is deployed.
+# Instance config is not scoped to a cloud, so the same blueprint serves every Kubernetes cluster;
+# the catalog App Spec (catalog/appspec.yaml) supplies cluster, namespace and form values.
 # The specs contain <%= customOptions.* %> tags (ports, storage) filled from the catalog form,
 # so deploy this blueprint through the "Voting App" catalog item, not directly from Apps.
 name: Voting App
@@ -14,41 +14,26 @@ tiers:
     tier:
       bootOrder: 0
     instances:
-      - instance: {type: kubernetesSpec, name: '${app.name}-db'}
-        clouds:
-          Local K8s Cloud:
-            instance: {name: '${app.name}-db', type: kubernetesSpec, layout: {id: 155, code: kube-1.0-single}}
-            plan: {id: 16, code: internal-custom-kubernetes}
-            config: {resourceSpecTemplateId: [{id: <ID_DB>, value: <ID_DB>, name: voting-app-db}]}
-      - instance: {type: kubernetesSpec, name: '${app.name}-redis'}
-        clouds:
-          Local K8s Cloud:
-            instance: {name: '${app.name}-redis', type: kubernetesSpec, layout: {id: 155, code: kube-1.0-single}}
-            plan: {id: 16, code: internal-custom-kubernetes}
-            config: {resourceSpecTemplateId: [{id: <ID_REDIS>, value: <ID_REDIS>, name: voting-app-redis}]}
+      - instance: {type: kubernetesSpec, name: '${app.name}-db', layout: {id: 155, code: kube-1.0-single}}
+        plan: {id: 16, code: internal-custom-kubernetes}
+        config: {resourceSpecTemplateId: [{id: <ID_DB>, value: <ID_DB>, name: voting-app-db}]}
+      - instance: {type: kubernetesSpec, name: '${app.name}-redis', layout: {id: 155, code: kube-1.0-single}}
+        plan: {id: 16, code: internal-custom-kubernetes}
+        config: {resourceSpecTemplateId: [{id: <ID_REDIS>, value: <ID_REDIS>, name: voting-app-redis}]}
   Backend:
     tier:
       bootOrder: 1
     instances:
-      - instance: {type: kubernetesSpec, name: '${app.name}-worker'}
-        clouds:
-          Local K8s Cloud:
-            instance: {name: '${app.name}-worker', type: kubernetesSpec, layout: {id: 155, code: kube-1.0-single}}
-            plan: {id: 16, code: internal-custom-kubernetes}
-            config: {resourceSpecTemplateId: [{id: <ID_WORKER>, value: <ID_WORKER>, name: voting-app-worker}]}
+      - instance: {type: kubernetesSpec, name: '${app.name}-worker', layout: {id: 155, code: kube-1.0-single}}
+        plan: {id: 16, code: internal-custom-kubernetes}
+        config: {resourceSpecTemplateId: [{id: <ID_WORKER>, value: <ID_WORKER>, name: voting-app-worker}]}
   Frontend:
     tier:
       bootOrder: 2
     instances:
-      - instance: {type: kubernetesSpec, name: '${app.name}-vote'}
-        clouds:
-          Local K8s Cloud:
-            instance: {name: '${app.name}-vote', type: kubernetesSpec, layout: {id: 155, code: kube-1.0-single}}
-            plan: {id: 16, code: internal-custom-kubernetes}
-            config: {resourceSpecTemplateId: [{id: <ID_VOTE>, value: <ID_VOTE>, name: voting-app-vote}]}
-      - instance: {type: kubernetesSpec, name: '${app.name}-result'}
-        clouds:
-          Local K8s Cloud:
-            instance: {name: '${app.name}-result', type: kubernetesSpec, layout: {id: 155, code: kube-1.0-single}}
-            plan: {id: 16, code: internal-custom-kubernetes}
-            config: {resourceSpecTemplateId: [{id: <ID_RESULT>, value: <ID_RESULT>, name: voting-app-result}]}
+      - instance: {type: kubernetesSpec, name: '${app.name}-vote', layout: {id: 155, code: kube-1.0-single}}
+        plan: {id: 16, code: internal-custom-kubernetes}
+        config: {resourceSpecTemplateId: [{id: <ID_VOTE>, value: <ID_VOTE>, name: voting-app-vote}]}
+      - instance: {type: kubernetesSpec, name: '${app.name}-result', layout: {id: 155, code: kube-1.0-single}}
+        plan: {id: 16, code: internal-custom-kubernetes}
+        config: {resourceSpecTemplateId: [{id: <ID_RESULT>, value: <ID_RESULT>, name: voting-app-result}]}

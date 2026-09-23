@@ -1,33 +1,42 @@
 # App Spec of the "Voting App" catalog item (type Blueprint -> blueprint "Voting App", form "Voting App").
-# Deploy-time choices come from the form (customOptions.*); spec templates and instance names come
-# from the blueprint. The same customOptions are also rendered inside the spec templates
-# (ports, storage class, storage size).
+# All choices come from the form (customOptions.*). Form values do NOT reach the instances'
+# customOptions on their own, so each instance gets the values its spec template renders.
+# customOptions.cluster is the cloud (zone) id of the selected Kubernetes cluster; instance.cloud
+# takes the plain id (a {id: x} object or a top-level defaultCloud is rejected: 'Could not find the selected cloud').
 name: <%= customOptions.appName %>
 group:
   name: All Clouds
-environment: dev
+environment: <%= customOptions.environment %>
 tiers:
   Database:
     instances:
-      - instance: {type: kubernetesSpec, cloud: Local K8s Cloud}
-        config: {resourcePoolId: '<%= customOptions.namespace %>'}
-      - instance: {type: kubernetesSpec, cloud: Local K8s Cloud}
-        config: {resourcePoolId: '<%= customOptions.namespace %>'}
+      - instance: {type: kubernetesSpec, cloud: <%= customOptions.cluster %>}
+        config:
+          resourcePoolId: '<%= customOptions.namespace %>'
+          customOptions: {storageClass: '<%= customOptions.storageClass %>', storageSize: '<%= customOptions.storageSize %>'}
+      - instance: {type: kubernetesSpec, cloud: <%= customOptions.cluster %>}
+        config:
+          resourcePoolId: '<%= customOptions.namespace %>'
+          customOptions: {storageClass: '<%= customOptions.storageClass %>', storageSize: '<%= customOptions.storageSize %>'}
   Backend:
     instances:
-      - instance: {type: kubernetesSpec, cloud: Local K8s Cloud}
+      - instance: {type: kubernetesSpec, cloud: <%= customOptions.cluster %>}
         config: {resourcePoolId: '<%= customOptions.namespace %>'}
   Frontend:
     instances:
       - instance:
           type: kubernetesSpec
-          cloud: Local K8s Cloud
+          cloud: <%= customOptions.cluster %>
           description: 'Voting UI: http://haproxy.hpetrlab.local:<%= customOptions.votePort %>'
-        config: {resourcePoolId: '<%= customOptions.namespace %>'}
+        config:
+          resourcePoolId: '<%= customOptions.namespace %>'
+          customOptions: {votePort: '<%= customOptions.votePort %>'}
         evars: [{name: VOTE_URL, value: 'http://haproxy.hpetrlab.local:<%= customOptions.votePort %>', export: false}]
       - instance:
           type: kubernetesSpec
-          cloud: Local K8s Cloud
+          cloud: <%= customOptions.cluster %>
           description: 'Results UI: http://haproxy.hpetrlab.local:<%= customOptions.resultPort %>'
-        config: {resourcePoolId: '<%= customOptions.namespace %>'}
+        config:
+          resourcePoolId: '<%= customOptions.namespace %>'
+          customOptions: {resultPort: '<%= customOptions.resultPort %>'}
         evars: [{name: RESULT_URL, value: 'http://haproxy.hpetrlab.local:<%= customOptions.resultPort %>', export: false}]
