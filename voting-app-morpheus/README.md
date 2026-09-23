@@ -49,7 +49,8 @@ Deleting the App in Morpheus removes all five instances and their Kubernetes obj
 ## Service Catalog
 
 The blueprint is ordered through the catalog item **Voting App** (type Blueprint, form
-**Voting App**). Several copies can run side by side, one per namespace.
+**Voting App**). Several copies can run side by side, one per namespace. Ordered from the UI and
+over the API on 2026-09-23 (Morpheus 9.0.2).
 
 | Form field | Goes to |
 |---|---|
