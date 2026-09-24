@@ -43,6 +43,14 @@ Turns a Grafana from this catalog into a Morpheus dashboard. `catalog/connect/`:
 | `form.json` | Form: Grafana App (option list "Helm Apps"), Grafana Admin Password (stored in Cypher `secret/grafana-admin/<app>`; may be left empty afterwards) |
 
 Service user: `grafana-reader`, role "Grafana Reader" - read only: activity, apps, clusters,
-clouds, hosts and VMs, all groups and clouds. `provisioning` (instances) has no read level in
+clouds, hosts and VMs, appliance health, monitoring, guidance, all groups and clouds. `provisioning` (instances) has no read level in
 Morpheus, so instances are shown through hosts and VMs instead. morph-api tokens live 30 days;
 every run of this item renews the token, so schedule it monthly (Jobs) to keep the dashboard alive.
+
+Dashboard sections (v1.2.0): overview counts and lists; one performance row per cluster (CPU,
+memory, network Tx/Rx, IOPS, swap - last sample only); Morpheus appliance (`/api/health`: CPU, JVM
+and system memory, storage, Elasticsearch, RabbitMQ, database); clouds (sync status); monitoring
+checks and incidents. Not available to a read-only user: licence usage (`admin-licenses` has no
+read level), integration alarms (`/api/health/alarms` stays 403 with `admin-health=read`),
+instance statistics (`provisioning` has no read level). `/api/guidance/stats` answers but returns
+0 for this user while an admin sees 13 recommendations, so it is left out.

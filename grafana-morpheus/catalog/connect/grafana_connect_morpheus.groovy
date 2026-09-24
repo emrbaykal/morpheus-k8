@@ -9,7 +9,12 @@ import javax.net.ssl.SSLSession
 import java.security.cert.X509Certificate
 
 // =============================================================================
-// grafana_connect_morpheus.groovy  (v1.1.0 - per-cluster performance rows)
+// grafana_connect_morpheus.groovy  (v1.2.0 - appliance health, clouds, monitoring)
+// v1.2.0: host tables gain network Tx/Rx, IOPS and swap; new rows for the
+//         Morpheus appliance itself (/api/health: CPU, memory, storage,
+//         Elasticsearch, RabbitMQ, database), cloud sync status (/api/zones)
+//         and monitoring checks / incidents. Needs admin-health and
+//         monitoring = read on the Grafana Reader role.
 // v1.1.0: one row per Morpheus cluster (HVM, Kubernetes, ...) with the last
 //         CPU and memory sample of each host/node (/api/servers?clusterId=N).
 //         Morpheus keeps only the latest sample in the API, so these are
@@ -244,7 +249,9 @@ clusterList.each { c ->
     def path = "/api/servers?max=200&clusterId=" + c.id
     def cols = [["name", "Host", "string"], ["powerState", "Power", "string"],
                 ["stats.cpuUsage", "CPU", "number"], ["stats.usedMemory", "Used memory", "number"],
-                ["stats.maxMemory", "Max memory", "number"], ["stats.ts", "Sampled at", "string"]]
+                ["stats.maxMemory", "Max memory", "number"], ["stats.netTxUsage", "Net Tx", "number"],
+                ["stats.netRxUsage", "Net Rx", "number"], ["stats.totalIOPS", "IOPS", "number"],
+                ["stats.usedSwap", "Swap used", "number"], ["stats.ts", "Sampled at", "string"]]
     def memPct = [id: "calculateField", options: [mode: "binary", alias: "Memory",
                   binary: [left: "Used memory", operator: "/", right: "Max memory"], replaceFields: false]]
     perfPanels << [id: pid++, type: "row", title: "${c.name} - performance (last sample Morpheus holds)".toString(),
@@ -265,9 +272,48 @@ clusterList.each { c ->
                        [matcher: [id: "byName", options: "CPU"], properties: [[id: "unit", value: "percent"], [id: "decimals", value: 1]]],
                        [matcher: [id: "byName", options: "Used memory"], properties: [[id: "unit", value: "bytes"]]],
                        [matcher: [id: "byName", options: "Max memory"], properties: [[id: "unit", value: "bytes"]]],
+                       [matcher: [id: "byName", options: "Swap used"], properties: [[id: "unit", value: "bytes"]]],
                        [matcher: [id: "byName", options: "Memory"], properties: [[id: "unit", value: "percentunit"], [id: "decimals", value: 1]]]]]]
     py += 9
 }
+
+// Morpheus appliance health, clouds, monitoring.
+def healthCols = [["cpu.cpuTotalLoad", "CPU", "number"], ["memory.memoryPercent", "JVM memory", "number"],
+                  ["memory.systemMemoryPercent", "System memory", "number"], ["storage.percent", "Storage", "number"],
+                  ["elastic.status", "Elasticsearch", "string"], ["rabbit.status", "RabbitMQ", "string"],
+                  ["database.status", "Database", "string"]]
+def healthStat = { String title, String field, String unit, Number max, int x ->
+    [id: pid++, type: "stat", title: title, datasource: ds, gridPos: [h: 4, w: 4, x: x, y: py + 1],
+     targets: [q("/api/health", "health", healthCols)],
+     fieldConfig: [defaults: [unit: unit, min: 0, max: max, decimals: 1], overrides: []],
+     options: [reduceOptions: [calcs: ["lastNotNull"], fields: "/^" + field + "\$/", values: false],
+               colorMode: "none", graphMode: "none", textMode: "value"]]
+}
+perfPanels << [id: pid++, type: "row", title: "Morpheus appliance", collapsed: false,
+               gridPos: [h: 1, w: 24, x: 0, y: py], panels: []]
+perfPanels << healthStat("CPU", "CPU", "percent", 100, 0)
+perfPanels << healthStat("JVM memory", "JVM memory", "percentunit", 1, 4)
+perfPanels << healthStat("System memory", "System memory", "percentunit", 1, 8)
+perfPanels << healthStat("Storage", "Storage", "percent", 100, 12)
+perfPanels << [id: pid++, type: "table", title: "Services", datasource: ds, gridPos: [h: 4, w: 8, x: 16, y: py + 1],
+               targets: [q("/api/health", "health", healthCols)],
+               transformations: [[id: "organize", options: [excludeByName: ["CPU": true, "JVM memory": true, "System memory": true, "Storage": true]]]]]
+perfPanels << table(pid++, "Appliance storage", "/api/health", "health.storage.files",
+                    [["path", "Path"], ["name", "Device"], ["percent", "Used %", "number"], ["total", "Size", "number"]],
+                    0, py + 5, 12, 6)
+perfPanels << table(pid++, "Clouds", "/api/zones?max=100", "zones",
+                    [["name", "Cloud"], ["zoneType.name", "Type"], ["status", "Status"], ["lastSync", "Last sync"]],
+                    12, py + 5, 12, 6)
+py += 11
+perfPanels << [id: pid++, type: "row", title: "Monitoring", collapsed: false,
+               gridPos: [h: 1, w: 24, x: 0, y: py], panels: []]
+perfPanels << table(pid++, "Checks", "/api/monitoring/checks?max=200", "checks",
+                    [["name", "Check"], ["checkType.name", "Type"], ["health", "Health", "number"],
+                     ["lastRunDate", "Last run"], ["lastError", "Last error"]],
+                    0, py + 1, 14, 8)
+perfPanels << table(pid++, "Incidents", "/api/monitoring/incidents?max=50", "incidents",
+                    [["displayName", "Incident"], ["status", "Status"], ["severity", "Severity"], ["startDate", "Start"]],
+                    14, py + 1, 10, 8)
 
 def dashboard = [
     uid: DASH_UID, title: "Morpheus Overview", tags: ["morpheus"], timezone: "browser",
