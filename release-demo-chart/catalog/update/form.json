@@ -1,0 +1,46 @@
+{
+  "optionTypeForm": {
+    "name": "Release Demo - Update",
+    "code": "release-demo-update",
+    "description": "Order form of the Release Demo - Update catalog item",
+    "options": [
+      {
+        "fieldName": "helmApp",
+        "fieldLabel": "Helm App",
+        "fieldContext": "config.customOptions",
+        "type": "select",
+        "required": true,
+        "optionSource": "list",
+        "optionList": {
+          "id": 22
+        },
+        "displayOrder": 0,
+        "helpBlock": "The Release Demo app to update."
+      },
+      {
+        "fieldName": "cluster",
+        "fieldLabel": "Kubernetes Cluster",
+        "fieldContext": "config.customOptions",
+        "type": "select",
+        "required": true,
+        "optionSource": "list",
+        "optionList": {
+          "id": 20
+        },
+        "displayOrder": 1,
+        "helpBlock": "The cluster the app runs on."
+      },
+      {
+        "fieldName": "replicas",
+        "fieldLabel": "Replicas",
+        "fieldContext": "config.customOptions",
+        "type": "text",
+        "required": true,
+        "defaultValue": "3",
+        "verifyPattern": "^[1-5]$",
+        "displayOrder": 2,
+        "helpBlock": "Number of pods, 1-5. The latest chart in Git is deployed as well."
+      }
+    ]
+  }
+}

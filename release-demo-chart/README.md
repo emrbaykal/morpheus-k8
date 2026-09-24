@@ -80,3 +80,20 @@ Replicas (1-5, default 3). Sources in `catalog/` (excluded from the chart by `.h
 Verified 2026-09-24: order `rlease-demo`, namespace `test`, NodePort 31210, v1.0.0 served by three
 pods at `http://apps.hpetrlab.local:31210`. Upgrades of a catalog-ordered copy work the same way
 (Apps > ACTIONS > Upgrade, Override Values not empty).
+
+## Catalog item "Release Demo - Update" (day-2)
+
+Lets an end user scale a running Release Demo app, or roll out what is in Git, from the Service
+Catalog without opening Apps > Upgrade. Morpheus has no API that triggers a Helm app upgrade
+(`/api/apps/{id}/prepare-apply` answers 400 for Helm apps), so the workflow runs `helm upgrade`
+itself. Sources in `catalog/update/`:
+
+| File | Morpheus object |
+|---|---|
+| `optionlist-helm-apps.js` | Option List "Helm Apps" (22): REST `/api/apps`, execution lease auth, Helm apps only, value = app id |
+| `release_demo_resolve.groovy` | Task "Release Demo - Resolve" (50), Groovy, code `rdResolve`, RESULT TYPE JSON. Validates the form, checks the app is a Helm app, maps the cluster's cloud id to the cluster id |
+| `release_demo_helm_upgrade.sh` | Task "Release Demo - Helm Upgrade" (51), Shell Script, Execute Target Local, **GIT REPO morpheus-k8 / main** - so it starts in Morpheus' cached copy of this repo and `./release-demo-chart` is the latest commit. Gets the cluster endpoint and token from `/api/clusters/{id}/api-config` with the executing user's token, writes a mode-600 kubeconfig that is removed on exit, finds the namespace with `helm list -A`, runs `helm upgrade --reuse-values --set replicaCount=<n> --wait` |
+| `form.json` | Form "Release Demo - Update" (21): Helm App, Kubernetes Cluster, Replicas 1-5 |
+| - | Workflow "Release Demo - Update" (23, operational: Resolve → Helm Upgrade), catalog item (16, type Workflow, context appliance) |
+
+Requires `helm` on every Morpheus app node (the task runs on whichever node picks it up).
