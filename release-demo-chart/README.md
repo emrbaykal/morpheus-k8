@@ -63,3 +63,20 @@ The lab load balancer passes NodePorts 30000-32767 to the Kubernetes nodes, so t
    `helm rollback <release> <revision>` from the cluster Control tab.
 5. **Reset for the next demo** - put `content/release.json` and `Chart.yaml` back to 1.0.0, push,
    upgrade once more.
+
+## Service Catalog item
+
+Catalog item **Release Demo** (type Blueprint, id 15) with form **Release Demo** (id 20): App Name,
+Kubernetes Cluster, Environment, Namespace (depends on the cluster), NodePort (default 31200),
+Replicas (1-5, default 3). Sources in `catalog/` (excluded from the chart by `.helmignore`):
+
+- `catalog/appspec.yaml` - the App Spec. The skeleton came from the UI (CONFIGURE on the catalog
+  item); for a Helm blueprint the namespace is `defaultPool.id` (numeric - the namespace option list
+  returns `pool-<id>`, so the App Spec strips the prefix) and Helm values go in
+  `templateParameter.values` as a YAML string passed with `-f`. No cloud field is needed.
+- `catalog/form.json` - the form body as sent to `POST /api/library/option-type-forms`. It reuses the
+  option lists "Kubernetes Clusters" (20), "Environments" (21) and "Voting App Namespaces" (18).
+
+Verified 2026-09-24: order `rlease-demo`, namespace `test`, NodePort 31210, v1.0.0 served by three
+pods at `http://apps.hpetrlab.local:31210`. Upgrades of a catalog-ordered copy work the same way
+(Apps > ACTIONS > Upgrade, Override Values not empty).
