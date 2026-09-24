@@ -18,14 +18,14 @@
         "helpBlock": "The Release Demo app to update."
       },
       {
-        "fieldName": "cluster",
+        "fieldName": "clusterId",
         "fieldLabel": "Kubernetes Cluster",
         "fieldContext": "config.customOptions",
         "type": "select",
         "required": true,
         "optionSource": "list",
         "optionList": {
-          "id": 20
+          "id": 23
         },
         "displayOrder": 1,
         "helpBlock": "The cluster the app runs on."

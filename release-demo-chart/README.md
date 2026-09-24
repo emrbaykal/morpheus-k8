@@ -90,10 +90,14 @@ itself. Sources in `catalog/update/`:
 
 | File | Morpheus object |
 |---|---|
-| `optionlist-helm-apps.js` | Option List "Helm Apps" (22): REST `/api/apps`, execution lease auth, Helm apps only, value = app id |
-| `release_demo_resolve.groovy` | Task "Release Demo - Resolve" (50), Groovy, code `rdResolve`, RESULT TYPE JSON. Validates the form, checks the app is a Helm app, maps the cluster's cloud id to the cluster id |
-| `release_demo_helm_upgrade.sh` | Task "Release Demo - Helm Upgrade" (51), Shell Script, Execute Target Local, **GIT REPO morpheus-k8 / main** - so it starts in Morpheus' cached copy of this repo and `./release-demo-chart` is the latest commit. Gets the cluster endpoint and token from `/api/clusters/{id}/api-config` with the executing user's token, writes a mode-600 kubeconfig that is removed on exit, finds the namespace with `helm list -A`, runs `helm upgrade --reuse-values --set replicaCount=<n> --wait` |
+| `optionlist-helm-apps.js` | Option Lists "Helm Apps" (22, value = app name = release) and "Kubernetes Cluster IDs" (23, value = cluster id, `optionlist-cluster-ids.js`); both REST with execution lease auth |
+| `release_demo_resolve.groovy` | Task "Release Demo - Resolve" (50), Groovy, code `rdResolve`. Validation only: the app is a Helm app, the cluster is Kubernetes, replicas 1-5 |
+| `release_demo_helm_upgrade.sh` | Task "Release Demo - Helm Upgrade" (51), Shell Script, Execute Target Local, **GIT REPO morpheus-k8 / main** - so it starts in Morpheus' cached copy of this repo and `./release-demo-chart` is the latest commit. Gets the cluster endpoint and token from `/api/clusters/{id}/api-config` with the executing user's token, writes a mode-600 kubeconfig that is removed on exit, finds the namespace with `helm list -A`; reads release, cluster id and replicas from the form (`customOptions`), runs `helm upgrade --reuse-values --set replicaCount=<n> --wait` |
 | `form.json` | Form "Release Demo - Update" (21): Helm App, Kubernetes Cluster, Replicas 1-5 |
 | - | Workflow "Release Demo - Update" (23, operational: Resolve → Helm Upgrade), catalog item (16, type Workflow, context appliance) |
 
 Requires `helm` on every Morpheus app node (the task runs on whichever node picks it up).
+
+Why the form carries the release name and cluster id: on 9.0.2 `results.<taskCode>` from the Groovy
+task is null in the Shell task, so nothing is handed between tasks. Verified 2026-09-24: order
+`release-demo`, 4 replicas -> Helm revision 2, chart 2.0.0, four pods.

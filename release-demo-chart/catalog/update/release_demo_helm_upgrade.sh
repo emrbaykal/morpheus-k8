@@ -1,6 +1,9 @@
 #!/bin/bash
 # =============================================================================
-# release_demo_helm_upgrade.sh  (v1.0.0 - first version)
+# release_demo_helm_upgrade.sh  (v1.1.0 - reads the form directly)
+# v1.1.0: results.rdResolve.* was null in this Shell task on 9.0.2; the release
+#         name, cluster id and replicas now come from customOptions.
+# v1.0.0: first version
 #
 # Task 2 of the "Release Demo - Update" workflow. Shell Script task,
 # EXECUTE TARGET = Local, GIT REPO = morpheus-k8, GIT REF = main.
@@ -8,8 +11,8 @@
 # (library/automation/tasks.rst), so ./release-demo-chart is the chart as of
 # the latest commit - no clone needed.
 #
-# Inputs come from task 1 (code rdResolve, RESULT TYPE JSON) through Morpheus
-# template substitution, which does run in Shell tasks.
+# Inputs come from the order form through Morpheus template substitution, which
+# does run in Shell tasks (task 1 has already validated them).
 # The cluster token is fetched here with the executing user's token and only
 # lives in a mode-600 kubeconfig that is deleted on exit.
 # =============================================================================
@@ -17,9 +20,9 @@ set -euo pipefail
 
 API='<%= morpheus.applianceUrl %>'
 TOKEN='<%= morpheus.apiAccessToken %>'
-RELEASE='<%= results.rdResolve.release %>'
-CLUSTER_ID='<%= results.rdResolve.clusterId %>'
-REPLICAS='<%= results.rdResolve.replicas %>'
+RELEASE='<%= customOptions.helmApp %>'
+CLUSTER_ID='<%= customOptions.clusterId %>'
+REPLICAS='<%= customOptions.replicas %>'
 CHART=./release-demo-chart
 
 command -v helm >/dev/null || { echo "helm is not installed on this Morpheus node"; exit 1; }
