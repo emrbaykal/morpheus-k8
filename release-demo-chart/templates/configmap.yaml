@@ -1,0 +1,8 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ .Release.Name }}-content
+  labels:
+    app: {{ .Release.Name }}
+data:
+{{ (.Files.Glob "content/*").AsConfig | indent 2 }}

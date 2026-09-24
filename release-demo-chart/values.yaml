@@ -1,0 +1,23 @@
+# Pods serving the page. More than one makes the rolling update visible.
+replicaCount: 3
+
+image:
+  repository: webdevops/php-nginx
+  tag: "8.3-alpine"
+  pullPolicy: IfNotPresent
+
+# NodePort published through the lab load balancer: http://apps.hpetrlab.local:<nodePort>
+service:
+  nodePort: 31200
+
+# Seconds a new pod must be Ready before the rollout moves on. Slows the rollout down
+# enough for the audience to watch pods switch version one by one.
+minReadySeconds: 10
+
+resources:
+  requests:
+    cpu: 50m
+    memory: 64Mi
+  limits:
+    cpu: 200m
+    memory: 128Mi

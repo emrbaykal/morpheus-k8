@@ -1,0 +1,9 @@
+{
+  "version": "1.0.0",
+  "title": "First release",
+  "accent": "#1f4e79",
+  "notes": [
+    "Initial deployment through a Morpheus Helm blueprint",
+    "Three replicas behind the lab load balancer"
+  ]
+}
