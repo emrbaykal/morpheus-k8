@@ -1,0 +1,4 @@
+{"optionTypeForm": {"name": "Grafana - Connect Morpheus", "code": "grafana-connect-morpheus", "description": "Order form of the Grafana - Connect Morpheus catalog item", "options": [
+ {"fieldName": "grafanaApp", "fieldLabel": "Grafana App", "fieldContext": "config.customOptions", "type": "select", "required": true, "optionSource": "list", "optionList": {"id": 22}, "displayOrder": 0, "helpBlock": "A Grafana ordered from the Grafana catalog item."},
+ {"fieldName": "grafanaPassword", "fieldLabel": "Grafana Admin Password", "fieldContext": "config.customOptions", "type": "password", "required": false, "displayOrder": 1, "helpBlock": "Needed on the first run for this Grafana; stored in Cypher and reused when left empty."}
+]}}

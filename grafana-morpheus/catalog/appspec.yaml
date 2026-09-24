@@ -5,8 +5,8 @@
 #   persistence  PVC on the StorageClass and size chosen in the form
 #   adminPassword from the form (lands in the chart's Secret; also stored in the order in Morpheus)
 # Namespace: defaultPool.id - the namespace option list returns "pool-<id>", the App Spec needs the id.
-id: __BLUEPRINT_ID__
-templateId: __BLUEPRINT_ID__
+id: 6
+templateId: 6
 type: helm
 name: <%= customOptions.appName %>
 description: 'Grafana: http://apps.hpetrlab.local:<%= customOptions.nodePort %> (user admin)'
