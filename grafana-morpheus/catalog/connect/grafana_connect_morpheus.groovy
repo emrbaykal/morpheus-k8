@@ -9,7 +9,11 @@ import javax.net.ssl.SSLSession
 import java.security.cert.X509Certificate
 
 // =============================================================================
-// grafana_connect_morpheus.groovy  (v1.2.0 - appliance health, clouds, monitoring)
+// grafana_connect_morpheus.groovy  (v1.3.0 - 1-year token via OAuth client 'grafana')
+// v1.3.0: the reader token is minted with the dedicated OAuth client 'grafana'
+//         (Administration > Settings > Clients, access token validity
+//         31536000 s = 1 year) instead of morph-api (30 days). Run this item
+//         once a year, or after rotating the grafana-reader password.
 // v1.2.0: host tables gain network Tx/Rx, IOPS and swap; new rows for the
 //         Morpheus appliance itself (/api/health: CPU, memory, storage,
 //         Elasticsearch, RabbitMQ, database), cloud sync status (/api/zones)
@@ -24,9 +28,8 @@ import java.security.cert.X509Certificate
 // Catalog item "Grafana - Connect Morpheus". Points a Grafana deployed from the
 // "Grafana" catalog item at this Morpheus appliance:
 //   1. mints a fresh API token for the read-only service user grafana-reader
-//      (password in Cypher secret/grafana-reader-password) and stores it in
-//      Cypher secret/grafana-reader-token - tokens of the morph-api client live
-//      30 days, so every run renews it
+//      (password in Cypher secret/grafana-reader-password) with the OAuth client
+//      'grafana' (1-year tokens) and stores it in Cypher secret/grafana-reader-token
 //   2. installs the Infinity data source plugin in Grafana (skipped if present)
 //   3. creates or updates the data source "Morpheus" (Bearer token, kept by
 //      Grafana in its encrypted secureJsonData)
@@ -50,6 +53,7 @@ final String PLUGIN_ID   = "yesoreyeram-infinity-datasource"
 final String DS_NAME     = "Morpheus"
 final String DASH_UID    = "morpheus-overview"
 final String READER_USER = "grafana-reader"
+final String OAUTH_CLIENT = "grafana"
 
 def opts = [
     { customOptions },
@@ -170,7 +174,7 @@ def readerPassword = cypherRead("secret/grafana-reader-password")
 if (!readerPassword) {
     throw new RuntimeException("Cypher secret/grafana-reader-password is missing - the grafana-reader service user is not set up.")
 }
-def form = "grant_type=password&scope=write&client_id=morph-api" +
+def form = "grant_type=password&scope=write&client_id=" + URLEncoder.encode(OAUTH_CLIENT, "UTF-8") +
         "&username=" + URLEncoder.encode(READER_USER, "UTF-8") +
         "&password=" + URLEncoder.encode(readerPassword, "UTF-8")
 def (tCode, tJson, tBody) = http("POST", applianceUrl + "/oauth/token",

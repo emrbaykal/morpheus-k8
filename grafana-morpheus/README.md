@@ -44,8 +44,9 @@ Turns a Grafana from this catalog into a Morpheus dashboard. `catalog/connect/`:
 
 Service user: `grafana-reader`, role "Grafana Reader" - read only: activity, apps, clusters,
 clouds, hosts and VMs, appliance health, monitoring, guidance, all groups and clouds. `provisioning` (instances) has no read level in
-Morpheus, so instances are shown through hosts and VMs instead. morph-api tokens live 30 days;
-every run of this item renews the token, so schedule it monthly (Jobs) to keep the dashboard alive.
+Morpheus, so instances are shown through hosts and VMs instead. Its token comes from the dedicated OAuth client `grafana` (Administration > Settings > Clients,
+access token validity 31536000 s = 1 year; morph-api would give 30 days). Re-run this item once a
+year. To revoke access at once: disable the grafana-reader user or delete the `grafana` client.
 
 Dashboard sections (v1.2.0): overview counts and lists; one performance row per cluster (CPU,
 memory, network Tx/Rx, IOPS, swap - last sample only); Morpheus appliance (`/api/health`: CPU, JVM
