@@ -1,9 +1,9 @@
 {
-  "version": "1.0.0",
-  "title": "First release",
-  "accent": "#1f4e79",
+  "version": "2.0.0",
+  "title": "Second release",
+  "accent": "#2e6b30",
   "notes": [
-    "Initial deployment through a Morpheus Helm blueprint",
-    "Three replicas behind the lab load balancer"
+    "New colour scheme",
+    "Delivered by a Helm upgrade from Morpheus, no downtime"
   ]
 }
