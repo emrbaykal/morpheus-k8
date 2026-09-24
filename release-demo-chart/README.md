@@ -50,8 +50,16 @@ The lab load balancer passes NodePorts 30000-32767 to the Kubernetes nodes, so t
    }
    ```
 
-3. **Ship v2** - Provisioning > Apps > the app > ACTIONS > **Upgrade** > APPLY. Keep the browser
-   open: the pods switch from v1 to v2 one at a time while the page keeps answering, and the Helm
-   revision goes up by one.
-4. **Roll back** (optional) - revert the commit and upgrade again, or run
+3. **Ship v2** - Provisioning > Apps > the app > ACTIONS > **Upgrade**, put `replicaCount=3` in
+   **Override Values**, APPLY. Keep the browser open: the pods switch from v1 to v2 one at a time
+   while the page keeps answering, and the Helm revision goes up by one. Upgrade pulls the chart
+   again from Git, so the pushed commit is what gets deployed.
+
+   **Override Values must not be empty on 9.0.2.** With the field empty, Upgrade fails at once with
+   `Failed to upgrade app: No such property: appConfig for class: com.morpheus.automation.HelmService`
+   and no process is started. Any value works; `replicaCount=<current count>` changes nothing else
+   (field-verified 2026-09-24).
+4. **Roll back** (optional) - revert the commit and upgrade again the same way, or run
    `helm rollback <release> <revision>` from the cluster Control tab.
+5. **Reset for the next demo** - put `content/release.json` and `Chart.yaml` back to 1.0.0, push,
+   upgrade once more.
