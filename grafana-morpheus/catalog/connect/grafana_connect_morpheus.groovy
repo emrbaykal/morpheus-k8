@@ -9,7 +9,12 @@ import javax.net.ssl.SSLSession
 import java.security.cert.X509Certificate
 
 // =============================================================================
-// grafana_connect_morpheus.groovy  (v1.0.0 - first version)
+// grafana_connect_morpheus.groovy  (v1.1.0 - per-cluster performance rows)
+// v1.1.0: one row per Morpheus cluster (HVM, Kubernetes, ...) with the last
+//         CPU and memory sample of each host/node (/api/servers?clusterId=N).
+//         Morpheus keeps only the latest sample in the API, so these are
+//         'now' values, not time series.
+// v1.0.0: first version
 //
 // Catalog item "Grafana - Connect Morpheus". Points a Grafana deployed from the
 // "Grafana" catalog item at this Morpheus appliance:
@@ -20,7 +25,8 @@ import java.security.cert.X509Certificate
 //   2. installs the Infinity data source plugin in Grafana (skipped if present)
 //   3. creates or updates the data source "Morpheus" (Bearer token, kept by
 //      Grafana in its encrypted secureJsonData)
-//   4. creates or overwrites the dashboard "Morpheus Overview"
+//   4. creates or overwrites the dashboard "Morpheus Overview", with one
+//      performance row per cluster (last CPU / memory sample of each host)
 // Running it again is safe: every step is create-or-update.
 //
 // Auth: Morpheus calls (Cypher) run on the executing user's token
@@ -229,6 +235,40 @@ def table = { int id, String title, String path, String root, List cols, int x, 
     [id: id, type: "table", title: title, datasource: ds, gridPos: [h: h, w: w, x: x, y: y],
      targets: [q(path, root, cols)]]
 }
+// Performance rows: one per cluster, built from the clusters the caller can see.
+def perfPanels = []
+int pid = 100
+int py = 32
+def clusterList = (morpheusGet("/api/clusters?max=50")?.clusters ?: []).sort { it.name?.toString() }
+clusterList.each { c ->
+    def path = "/api/servers?max=200&clusterId=" + c.id
+    def cols = [["name", "Host", "string"], ["powerState", "Power", "string"],
+                ["stats.cpuUsage", "CPU", "number"], ["stats.usedMemory", "Used memory", "number"],
+                ["stats.maxMemory", "Max memory", "number"], ["stats.ts", "Sampled at", "string"]]
+    def memPct = [id: "calculateField", options: [mode: "binary", alias: "Memory",
+                  binary: [left: "Used memory", operator: "/", right: "Max memory"], replaceFields: false]]
+    perfPanels << [id: pid++, type: "row", title: "${c.name} - performance (last sample Morpheus holds)".toString(),
+                   collapsed: false, gridPos: [h: 1, w: 24, x: 0, y: py], panels: []]
+    perfPanels << [id: pid++, type: "bargauge", title: "CPU %", datasource: ds, gridPos: [h: 8, w: 6, x: 0, y: py + 1],
+                   targets: [q(path, "servers", cols)],
+                   fieldConfig: [defaults: [unit: "percent", min: 0, max: 100, decimals: 1], overrides: []],
+                   options: [reduceOptions: [values: true, calcs: [], fields: "/^CPU\$/"], orientation: "horizontal",
+                             displayMode: "basic", showUnfilled: true]]
+    perfPanels << [id: pid++, type: "bargauge", title: "Memory used", datasource: ds, gridPos: [h: 8, w: 6, x: 6, y: py + 1],
+                   targets: [q(path, "servers", cols)], transformations: [memPct],
+                   fieldConfig: [defaults: [unit: "percentunit", min: 0, max: 1, decimals: 1], overrides: []],
+                   options: [reduceOptions: [values: true, calcs: [], fields: "/^Memory\$/"], orientation: "horizontal",
+                             displayMode: "basic", showUnfilled: true]]
+    perfPanels << [id: pid++, type: "table", title: "Hosts / nodes", datasource: ds, gridPos: [h: 8, w: 12, x: 12, y: py + 1],
+                   targets: [q(path, "servers", cols)], transformations: [memPct],
+                   fieldConfig: [defaults: [:], overrides: [
+                       [matcher: [id: "byName", options: "CPU"], properties: [[id: "unit", value: "percent"], [id: "decimals", value: 1]]],
+                       [matcher: [id: "byName", options: "Used memory"], properties: [[id: "unit", value: "bytes"]]],
+                       [matcher: [id: "byName", options: "Max memory"], properties: [[id: "unit", value: "bytes"]]],
+                       [matcher: [id: "byName", options: "Memory"], properties: [[id: "unit", value: "percentunit"], [id: "decimals", value: 1]]]]]]
+    py += 9
+}
+
 def dashboard = [
     uid: DASH_UID, title: "Morpheus Overview", tags: ["morpheus"], timezone: "browser",
     refresh: "5m", schemaVersion: 39, time: [from: "now-24h", to: "now"],
@@ -250,7 +290,7 @@ def dashboard = [
         table(8, "Recent activity", "/api/activity?max=50", "activity",
               [["ts", "Time"], ["name", "Object"], ["activityType", "Type"], ["message", "Message"], ["userName", "User"]],
               0, 22, 24, 10)
-    ]
+    ] + perfPanels
 ]
 def (dCode, dJson, dBody) = grafana("POST", "/api/dashboards/db", [dashboard: dashboard, overwrite: true, message: "Morpheus catalog: Grafana - Connect Morpheus"])
 if (dCode >= 400) {
