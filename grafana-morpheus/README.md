@@ -55,3 +55,8 @@ checks and incidents. Not available to a read-only user: licence usage (`admin-l
 read level), integration alarms (`/api/health/alarms` stays 403 with `admin-health=read`),
 instance statistics (`provisioning` has no read level). `/api/guidance/stats` answers but returns
 0 for this user while an admin sees 13 recommendations, so it is left out.
+
+v1.4.0 adds per-cloud "Virtual machines" tables and, when the in-cluster kube-prometheus answers at
+`http://prometheus-k8s.monitoring.svc:9090`, data source "Prometheus HKS" plus a second dashboard
+"Kubernetes Pods" (node CPU/memory, pod CPU, memory, network, PVC usage over time; namespace
+filter). Prometheus keeps 1 day of data on this cluster.

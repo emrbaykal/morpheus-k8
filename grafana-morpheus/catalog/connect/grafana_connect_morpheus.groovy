@@ -9,7 +9,13 @@ import javax.net.ssl.SSLSession
 import java.security.cert.X509Certificate
 
 // =============================================================================
-// grafana_connect_morpheus.groovy  (v1.3.0 - 1-year token via OAuth client 'grafana')
+// grafana_connect_morpheus.groovy  (v1.4.0 - VM tables, Prometheus pods dashboard)
+// v1.4.0: one 'Virtual machines' table per cloud (/api/servers?vm=true, last
+//         sample: CPU, memory, disk, network, IOPS); data source 'Prometheus HKS'
+//         (kube-prometheus in the cluster Grafana runs in) and a second
+//         dashboard 'Kubernetes Pods' with per-pod CPU, memory, network and
+//         PVC usage over time, plus node CPU/memory. Prometheus is optional:
+//         if it does not answer, that part is skipped and reported.
 // v1.3.0: the reader token is minted with the dedicated OAuth client 'grafana'
 //         (Administration > Settings > Clients, access token validity
 //         31536000 s = 1 year) instead of morph-api (30 days). Run this item
@@ -52,6 +58,9 @@ import java.security.cert.X509Certificate
 final String PLUGIN_ID   = "yesoreyeram-infinity-datasource"
 final String DS_NAME     = "Morpheus"
 final String DASH_UID    = "morpheus-overview"
+final String PROM_NAME   = "Prometheus HKS"
+final String PROM_URL    = "http://prometheus-k8s.monitoring.svc:9090"
+final String PODS_UID    = "kubernetes-pods"
 final String READER_USER = "grafana-reader"
 final String OAUTH_CLIENT = "grafana"
 
@@ -319,6 +328,36 @@ perfPanels << table(pid++, "Incidents", "/api/monitoring/incidents?max=50", "inc
                     [["displayName", "Incident"], ["status", "Status"], ["severity", "Severity"], ["startDate", "Start"]],
                     14, py + 1, 10, 8)
 
+// Virtual machines, one table per cloud that has any.
+py += 9
+def vmCols = [["name", "VM", "string"], ["powerState", "Power", "string"], ["stats.cpuUsage", "CPU", "number"],
+              ["stats.usedMemory", "Used memory", "number"], ["stats.maxMemory", "Max memory", "number"],
+              ["stats.usedStorage", "Used disk", "number"], ["stats.maxStorage", "Max disk", "number"],
+              ["stats.netTxUsage", "Net Tx", "number"], ["stats.netRxUsage", "Net Rx", "number"],
+              ["stats.totalIOPS", "IOPS", "number"], ["stats.ts", "Sampled at", "string"]]
+def byteCols = ["Used memory", "Max memory", "Used disk", "Max disk"]
+def vmZones = (morpheusGet("/api/zones?max=100")?.zones ?: []).sort { it.name?.toString() }
+def vmSections = []
+vmZones.each { z ->
+    def cnt = morpheusGet("/api/servers?max=1&vm=true&zoneId=" + z.id)?.meta?.total ?: 0
+    if (cnt > 0) { vmSections << [zone: z, count: cnt] }
+}
+if (!vmSections.isEmpty()) {
+    perfPanels << [id: pid++, type: "row", title: "Virtual machines (last sample Morpheus holds)", collapsed: false,
+                   gridPos: [h: 1, w: 24, x: 0, y: py], panels: []]
+    py += 1
+    vmSections.each { sec ->
+        int h = Math.min(4 + (sec.count as int), 14)
+        def overrides = byteCols.collect { n -> [matcher: [id: "byName", options: n], properties: [[id: "unit", value: "bytes"]]] }
+        overrides << [matcher: [id: "byName", options: "CPU"], properties: [[id: "unit", value: "percent"], [id: "decimals", value: 1]]]
+        perfPanels << [id: pid++, type: "table", title: "${sec.zone.name} - ${sec.count} VMs".toString(), datasource: ds,
+                       gridPos: [h: h, w: 24, x: 0, y: py],
+                       targets: [q("/api/servers?max=500&vm=true&zoneId=" + sec.zone.id, "servers", vmCols)],
+                       fieldConfig: [defaults: [:], overrides: overrides]]
+        py += h
+    }
+}
+
 def dashboard = [
     uid: DASH_UID, title: "Morpheus Overview", tags: ["morpheus"], timezone: "browser",
     refresh: "5m", schemaVersion: 39, time: [from: "now-24h", to: "now"],
@@ -347,4 +386,57 @@ if (dCode >= 400) {
     throw new RuntimeException("Importing the dashboard failed (HTTP ${dCode}): ${apiMsg(dJson, dBody)}")
 }
 
-println "Grafana ${grafanaUrl}: plugin ${pluginAction}, data source '${DS_NAME}' ${dsAction}, dashboard ${grafanaUrl}${dJson?.url ?: '/d/' + DASH_UID}; grafana-reader token renewed."
+// --- 6. Prometheus (kube-prometheus in the cluster this Grafana runs in) -----------
+def promNote
+def promBody = [name: PROM_NAME, type: "prometheus", access: "proxy", url: PROM_URL, jsonData: [timeInterval: "30s"]]
+def (pgCode, pgJson, pgBody) = grafana("GET", "/api/datasources/name/" + URLEncoder.encode(PROM_NAME, "UTF-8"), null)
+def promUid = null
+if (pgCode == 200 && pgJson?.id) {
+    promBody.uid = pgJson.uid
+    def (puCode, puJson, puBody) = grafana("PUT", "/api/datasources/" + pgJson.id, promBody)
+    if (puCode < 400) { promUid = pgJson.uid }
+} else {
+    def (pcCode, pcJson, pcBody) = grafana("POST", "/api/datasources", promBody)
+    if (pcCode < 400) { promUid = pcJson?.datasource?.uid ?: pcJson?.uid }
+}
+def promOk = false
+if (promUid) {
+    def (phCode, phJson, phBody) = grafana("GET", "/api/datasources/uid/" + promUid + "/health", null)
+    promOk = (phCode == 200 && phJson?.status?.toString() == "OK")
+}
+if (!promOk) {
+    promNote = "Prometheus at ${PROM_URL} did not answer - pods dashboard skipped"
+} else {
+    def pds = [type: "prometheus", uid: promUid]
+    def ns = 'namespace=~"$namespace"'
+    def ts = { int id, String title, String expr, String legend, String unit, int x, int y, int w ->
+        [id: id, type: "timeseries", title: title, datasource: pds, gridPos: [h: 8, w: w, x: x, y: y],
+         targets: [[refId: "A", datasource: pds, expr: expr, legendFormat: legend]],
+         fieldConfig: [defaults: [unit: unit], overrides: []],
+         options: [legend: [displayMode: "table", placement: "right", calcs: ["lastNotNull", "max"]]]]
+    }
+    def pods = [
+        uid: PODS_UID, title: "Kubernetes Pods", tags: ["kubernetes", "morpheus"], timezone: "browser",
+        refresh: "1m", schemaVersion: 39, time: [from: "now-6h", to: "now"],
+        templating: [list: [[name: "namespace", label: "Namespace", type: "query", datasource: pds,
+                             query: [query: "label_values(kube_pod_info, namespace)", refId: "ns"],
+                             definition: "label_values(kube_pod_info, namespace)", refresh: 1,
+                             multi: true, includeAll: true, allValue: ".*", current: [text: "All", value: '$__all']]]],
+        panels: [
+            ts(1, "Node CPU %", '100 - avg by (instance) (rate(node_cpu_seconds_total{mode="idle"}[5m])) * 100', "{{instance}}", "percent", 0, 0, 12),
+            ts(2, "Node memory used %", '(1 - node_memory_MemAvailable_bytes / node_memory_MemTotal_bytes) * 100', "{{instance}}", "percent", 12, 0, 12),
+            ts(3, "Pod CPU (cores)", 'sum by (namespace, pod) (rate(container_cpu_usage_seconds_total{' + ns + ', container!=""}[5m]))', "{{namespace}}/{{pod}}", "short", 0, 8, 12),
+            ts(4, "Pod memory (working set)", 'sum by (namespace, pod) (container_memory_working_set_bytes{' + ns + ', container!=""})', "{{namespace}}/{{pod}}", "bytes", 12, 8, 12),
+            ts(5, "Pod network receive", 'sum by (namespace, pod) (rate(container_network_receive_bytes_total{' + ns + '}[5m]))', "{{namespace}}/{{pod}}", "Bps", 0, 16, 12),
+            ts(6, "Pod network transmit", 'sum by (namespace, pod) (rate(container_network_transmit_bytes_total{' + ns + '}[5m]))', "{{namespace}}/{{pod}}", "Bps", 12, 16, 12),
+            ts(7, "PVC used %", 'kubelet_volume_stats_used_bytes{' + ns + '} / kubelet_volume_stats_capacity_bytes{' + ns + '} * 100', "{{namespace}}/{{persistentvolumeclaim}}", "percent", 0, 24, 24)
+        ]
+    ]
+    def (kCode, kJson, kBody) = grafana("POST", "/api/dashboards/db", [dashboard: pods, overwrite: true, message: "Morpheus catalog: Grafana - Connect Morpheus"])
+    if (kCode >= 400) {
+        throw new RuntimeException("Importing the Kubernetes Pods dashboard failed (HTTP ${kCode}): ${apiMsg(kJson, kBody)}")
+    }
+    promNote = "data source '${PROM_NAME}' ready, dashboard ${grafanaUrl}${kJson?.url ?: '/d/' + PODS_UID}"
+}
+
+println "Grafana ${grafanaUrl}: plugin ${pluginAction}, data source '${DS_NAME}' ${dsAction}, dashboard ${grafanaUrl}${dJson?.url ?: '/d/' + DASH_UID}; ${promNote}; grafana-reader token renewed."
