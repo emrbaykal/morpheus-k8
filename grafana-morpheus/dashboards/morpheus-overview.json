@@ -1,0 +1,2098 @@
+{
+  "__inputs": [
+    {
+      "name": "DS_MORPHEUS",
+      "label": "Morpheus (Infinity)",
+      "description": "Infinity data source pointing at Morpheus",
+      "type": "datasource",
+      "pluginId": "yesoreyeram-infinity-datasource",
+      "pluginName": "Infinity"
+    }
+  ],
+  "__requires": [
+    {
+      "type": "datasource",
+      "id": "yesoreyeram-infinity-datasource",
+      "name": "Infinity",
+      "version": "4.0.0"
+    },
+    {
+      "type": "grafana",
+      "id": "grafana",
+      "name": "Grafana",
+      "version": "10.0.0"
+    }
+  ],
+  "uid": "morpheus-overview",
+  "title": "Morpheus Overview",
+  "tags": [
+    "morpheus"
+  ],
+  "timezone": "browser",
+  "refresh": "5m",
+  "schemaVersion": 39,
+  "time": {
+    "from": "now-24h",
+    "to": "now"
+  },
+  "templating": {
+    "list": [
+      {
+        "name": "cluster",
+        "label": "Cluster",
+        "type": "query",
+        "datasource": {
+          "type": "yesoreyeram-infinity-datasource",
+          "uid": "${DS_MORPHEUS}"
+        },
+        "query": {
+          "queryType": "infinity",
+          "infinityQuery": {
+            "refId": "A",
+            "type": "json",
+            "source": "url",
+            "parser": "backend",
+            "format": "table",
+            "url": "/api/clusters?max=100",
+            "url_options": {
+              "method": "GET",
+              "data": ""
+            },
+            "root_selector": "clusters",
+            "columns": [
+              {
+                "selector": "name",
+                "text": "__text",
+                "type": "string"
+              },
+              {
+                "selector": "id",
+                "text": "__value",
+                "type": "string"
+              }
+            ]
+          },
+          "query": "",
+          "refId": "A"
+        },
+        "definition": "Infinity /api/clusters?max=100",
+        "refresh": 1,
+        "multi": true,
+        "includeAll": true,
+        "current": {
+          "text": [
+            "All"
+          ],
+          "value": [
+            "$__all"
+          ]
+        },
+        "sort": 1,
+        "options": []
+      },
+      {
+        "name": "cloud",
+        "label": "Cloud",
+        "type": "query",
+        "datasource": {
+          "type": "yesoreyeram-infinity-datasource",
+          "uid": "${DS_MORPHEUS}"
+        },
+        "query": {
+          "queryType": "infinity",
+          "infinityQuery": {
+            "refId": "A",
+            "type": "json",
+            "source": "url",
+            "parser": "backend",
+            "format": "table",
+            "url": "/api/zones?max=100",
+            "url_options": {
+              "method": "GET",
+              "data": ""
+            },
+            "root_selector": "zones",
+            "columns": [
+              {
+                "selector": "name",
+                "text": "__text",
+                "type": "string"
+              },
+              {
+                "selector": "id",
+                "text": "__value",
+                "type": "string"
+              }
+            ]
+          },
+          "query": "",
+          "refId": "A"
+        },
+        "definition": "Infinity /api/zones?max=100",
+        "refresh": 1,
+        "multi": true,
+        "includeAll": true,
+        "current": {
+          "text": [
+            "All"
+          ],
+          "value": [
+            "$__all"
+          ]
+        },
+        "sort": 1,
+        "options": []
+      }
+    ]
+  },
+  "panels": [
+    {
+      "datasource": {
+        "type": "yesoreyeram-infinity-datasource",
+        "uid": "${DS_MORPHEUS}"
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 6,
+        "x": 0,
+        "y": 0
+      },
+      "id": 1,
+      "options": {
+        "colorMode": "none",
+        "graphMode": "none",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        }
+      },
+      "targets": [
+        {
+          "columns": [
+            {
+              "selector": "total",
+              "text": "Total",
+              "type": "number"
+            }
+          ],
+          "datasource": {
+            "type": "yesoreyeram-infinity-datasource",
+            "uid": "${DS_MORPHEUS}"
+          },
+          "format": "table",
+          "parser": "backend",
+          "refId": "A",
+          "root_selector": "meta",
+          "source": "url",
+          "type": "json",
+          "url": "/api/apps?max=1",
+          "url_options": {
+            "data": "",
+            "method": "GET"
+          }
+        }
+      ],
+      "title": "Apps",
+      "type": "stat"
+    },
+    {
+      "datasource": {
+        "type": "yesoreyeram-infinity-datasource",
+        "uid": "${DS_MORPHEUS}"
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 6,
+        "x": 6,
+        "y": 0
+      },
+      "id": 2,
+      "options": {
+        "colorMode": "none",
+        "graphMode": "none",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        }
+      },
+      "targets": [
+        {
+          "columns": [
+            {
+              "selector": "total",
+              "text": "Total",
+              "type": "number"
+            }
+          ],
+          "datasource": {
+            "type": "yesoreyeram-infinity-datasource",
+            "uid": "${DS_MORPHEUS}"
+          },
+          "format": "table",
+          "parser": "backend",
+          "refId": "A",
+          "root_selector": "meta",
+          "source": "url",
+          "type": "json",
+          "url": "/api/servers?max=1",
+          "url_options": {
+            "data": "",
+            "method": "GET"
+          }
+        }
+      ],
+      "title": "Hosts and VMs",
+      "type": "stat"
+    },
+    {
+      "datasource": {
+        "type": "yesoreyeram-infinity-datasource",
+        "uid": "${DS_MORPHEUS}"
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 6,
+        "x": 12,
+        "y": 0
+      },
+      "id": 3,
+      "options": {
+        "colorMode": "none",
+        "graphMode": "none",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        }
+      },
+      "targets": [
+        {
+          "columns": [
+            {
+              "selector": "total",
+              "text": "Total",
+              "type": "number"
+            }
+          ],
+          "datasource": {
+            "type": "yesoreyeram-infinity-datasource",
+            "uid": "${DS_MORPHEUS}"
+          },
+          "format": "table",
+          "parser": "backend",
+          "refId": "A",
+          "root_selector": "meta",
+          "source": "url",
+          "type": "json",
+          "url": "/api/clusters?max=1",
+          "url_options": {
+            "data": "",
+            "method": "GET"
+          }
+        }
+      ],
+      "title": "Kubernetes clusters and others",
+      "type": "stat"
+    },
+    {
+      "datasource": {
+        "type": "yesoreyeram-infinity-datasource",
+        "uid": "${DS_MORPHEUS}"
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 6,
+        "x": 18,
+        "y": 0
+      },
+      "id": 4,
+      "options": {
+        "colorMode": "none",
+        "graphMode": "none",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        }
+      },
+      "targets": [
+        {
+          "columns": [
+            {
+              "selector": "total",
+              "text": "Total",
+              "type": "number"
+            }
+          ],
+          "datasource": {
+            "type": "yesoreyeram-infinity-datasource",
+            "uid": "${DS_MORPHEUS}"
+          },
+          "format": "table",
+          "parser": "backend",
+          "refId": "A",
+          "root_selector": "meta",
+          "source": "url",
+          "type": "json",
+          "url": "/api/zones?max=1",
+          "url_options": {
+            "data": "",
+            "method": "GET"
+          }
+        }
+      ],
+      "title": "Clouds",
+      "type": "stat"
+    },
+    {
+      "datasource": {
+        "type": "yesoreyeram-infinity-datasource",
+        "uid": "${DS_MORPHEUS}"
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 4
+      },
+      "id": 5,
+      "targets": [
+        {
+          "columns": [
+            {
+              "selector": "name",
+              "text": "Name",
+              "type": "string"
+            },
+            {
+              "selector": "type",
+              "text": "Type",
+              "type": "string"
+            },
+            {
+              "selector": "status",
+              "text": "Status",
+              "type": "string"
+            },
+            {
+              "selector": "appContext",
+              "text": "Environment",
+              "type": "string"
+            },
+            {
+              "selector": "group.name",
+              "text": "Group",
+              "type": "string"
+            }
+          ],
+          "datasource": {
+            "type": "yesoreyeram-infinity-datasource",
+            "uid": "${DS_MORPHEUS}"
+          },
+          "format": "table",
+          "parser": "backend",
+          "refId": "A",
+          "root_selector": "apps",
+          "source": "url",
+          "type": "json",
+          "url": "/api/apps?max=200",
+          "url_options": {
+            "data": "",
+            "method": "GET"
+          }
+        }
+      ],
+      "title": "Apps",
+      "transformations": [
+        {
+          "id": "organize",
+          "options": {
+            "excludeByName": {},
+            "indexByName": {
+              "Environment": 3,
+              "Group": 4,
+              "Name": 0,
+              "Status": 2,
+              "Type": 1
+            },
+            "renameByName": {}
+          }
+        }
+      ],
+      "type": "table"
+    },
+    {
+      "datasource": {
+        "type": "yesoreyeram-infinity-datasource",
+        "uid": "${DS_MORPHEUS}"
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 4
+      },
+      "id": 6,
+      "targets": [
+        {
+          "columns": [
+            {
+              "selector": "name",
+              "text": "Name",
+              "type": "string"
+            },
+            {
+              "selector": "type.name",
+              "text": "Type",
+              "type": "string"
+            },
+            {
+              "selector": "status",
+              "text": "Status",
+              "type": "string"
+            },
+            {
+              "selector": "zone.name",
+              "text": "Cloud",
+              "type": "string"
+            }
+          ],
+          "datasource": {
+            "type": "yesoreyeram-infinity-datasource",
+            "uid": "${DS_MORPHEUS}"
+          },
+          "format": "table",
+          "parser": "backend",
+          "refId": "A",
+          "root_selector": "clusters",
+          "source": "url",
+          "type": "json",
+          "url": "/api/clusters?max=200",
+          "url_options": {
+            "data": "",
+            "method": "GET"
+          }
+        }
+      ],
+      "title": "Clusters",
+      "transformations": [
+        {
+          "id": "organize",
+          "options": {
+            "excludeByName": {},
+            "indexByName": {
+              "Cloud": 3,
+              "Name": 0,
+              "Status": 2,
+              "Type": 1
+            },
+            "renameByName": {}
+          }
+        }
+      ],
+      "type": "table"
+    },
+    {
+      "datasource": {
+        "type": "yesoreyeram-infinity-datasource",
+        "uid": "${DS_MORPHEUS}"
+      },
+      "gridPos": {
+        "h": 10,
+        "w": 24,
+        "x": 0,
+        "y": 12
+      },
+      "id": 7,
+      "targets": [
+        {
+          "columns": [
+            {
+              "selector": "name",
+              "text": "Name",
+              "type": "string"
+            },
+            {
+              "selector": "powerState",
+              "text": "Power",
+              "type": "string"
+            },
+            {
+              "selector": "status",
+              "text": "Status",
+              "type": "string"
+            },
+            {
+              "selector": "zone.name",
+              "text": "Cloud",
+              "type": "string"
+            },
+            {
+              "selector": "computeServerType.name",
+              "text": "Type",
+              "type": "string"
+            },
+            {
+              "selector": "osType",
+              "text": "OS",
+              "type": "string"
+            }
+          ],
+          "datasource": {
+            "type": "yesoreyeram-infinity-datasource",
+            "uid": "${DS_MORPHEUS}"
+          },
+          "format": "table",
+          "parser": "backend",
+          "refId": "A",
+          "root_selector": "servers",
+          "source": "url",
+          "type": "json",
+          "url": "/api/servers?max=500",
+          "url_options": {
+            "data": "",
+            "method": "GET"
+          }
+        }
+      ],
+      "title": "Hosts and VMs",
+      "transformations": [
+        {
+          "id": "organize",
+          "options": {
+            "excludeByName": {},
+            "indexByName": {
+              "Cloud": 3,
+              "Name": 0,
+              "OS": 5,
+              "Power": 1,
+              "Status": 2,
+              "Type": 4
+            },
+            "renameByName": {}
+          }
+        }
+      ],
+      "type": "table"
+    },
+    {
+      "datasource": {
+        "type": "yesoreyeram-infinity-datasource",
+        "uid": "${DS_MORPHEUS}"
+      },
+      "gridPos": {
+        "h": 10,
+        "w": 24,
+        "x": 0,
+        "y": 22
+      },
+      "id": 8,
+      "targets": [
+        {
+          "columns": [
+            {
+              "selector": "ts",
+              "text": "Time",
+              "type": "string"
+            },
+            {
+              "selector": "name",
+              "text": "Object",
+              "type": "string"
+            },
+            {
+              "selector": "activityType",
+              "text": "Type",
+              "type": "string"
+            },
+            {
+              "selector": "message",
+              "text": "Message",
+              "type": "string"
+            },
+            {
+              "selector": "userName",
+              "text": "User",
+              "type": "string"
+            }
+          ],
+          "datasource": {
+            "type": "yesoreyeram-infinity-datasource",
+            "uid": "${DS_MORPHEUS}"
+          },
+          "format": "table",
+          "parser": "backend",
+          "refId": "A",
+          "root_selector": "activity",
+          "source": "url",
+          "type": "json",
+          "url": "/api/activity?max=50",
+          "url_options": {
+            "data": "",
+            "method": "GET"
+          }
+        }
+      ],
+      "title": "Recent activity",
+      "transformations": [
+        {
+          "id": "organize",
+          "options": {
+            "excludeByName": {},
+            "indexByName": {
+              "Message": 3,
+              "Object": 1,
+              "Time": 0,
+              "Type": 2,
+              "User": 4
+            },
+            "renameByName": {}
+          }
+        }
+      ],
+      "type": "table"
+    },
+    {
+      "id": 100,
+      "type": "row",
+      "title": "${cluster:text} - performance (last sample Morpheus holds)",
+      "repeat": "cluster",
+      "collapsed": false,
+      "panels": [],
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 32
+      }
+    },
+    {
+      "datasource": {
+        "type": "yesoreyeram-infinity-datasource",
+        "uid": "${DS_MORPHEUS}"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "decimals": 1,
+          "max": 100,
+          "min": 0,
+          "unit": "percent"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 6,
+        "x": 0,
+        "y": 33
+      },
+      "id": 101,
+      "options": {
+        "displayMode": "basic",
+        "orientation": "horizontal",
+        "reduceOptions": {
+          "calcs": [],
+          "fields": "/^CPU$/",
+          "values": true
+        },
+        "showUnfilled": true
+      },
+      "targets": [
+        {
+          "columns": [
+            {
+              "selector": "name",
+              "text": "Host",
+              "type": "string"
+            },
+            {
+              "selector": "powerState",
+              "text": "Power",
+              "type": "string"
+            },
+            {
+              "selector": "stats.cpuUsage",
+              "text": "CPU",
+              "type": "number"
+            },
+            {
+              "selector": "stats.usedMemory",
+              "text": "Used memory",
+              "type": "number"
+            },
+            {
+              "selector": "stats.maxMemory",
+              "text": "Max memory",
+              "type": "number"
+            },
+            {
+              "selector": "stats.netTxUsage",
+              "text": "Net Tx",
+              "type": "number"
+            },
+            {
+              "selector": "stats.netRxUsage",
+              "text": "Net Rx",
+              "type": "number"
+            },
+            {
+              "selector": "stats.totalIOPS",
+              "text": "IOPS",
+              "type": "number"
+            },
+            {
+              "selector": "stats.usedSwap",
+              "text": "Swap used",
+              "type": "number"
+            },
+            {
+              "selector": "stats.ts",
+              "text": "Sampled at",
+              "type": "string"
+            }
+          ],
+          "datasource": {
+            "type": "yesoreyeram-infinity-datasource",
+            "uid": "${DS_MORPHEUS}"
+          },
+          "format": "table",
+          "parser": "backend",
+          "refId": "A",
+          "root_selector": "servers",
+          "source": "url",
+          "type": "json",
+          "url": "/api/servers?max=200&clusterId=${cluster}",
+          "url_options": {
+            "data": "",
+            "method": "GET"
+          }
+        }
+      ],
+      "title": "CPU %",
+      "transformations": [
+        {
+          "id": "organize",
+          "options": {
+            "excludeByName": {
+              "Power": true,
+              "Sampled at": true
+            },
+            "indexByName": {
+              "Host": 0
+            },
+            "renameByName": {}
+          }
+        }
+      ],
+      "type": "bargauge"
+    },
+    {
+      "datasource": {
+        "type": "yesoreyeram-infinity-datasource",
+        "uid": "${DS_MORPHEUS}"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "decimals": 1,
+          "max": 1,
+          "min": 0,
+          "unit": "percentunit"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 6,
+        "x": 6,
+        "y": 33
+      },
+      "id": 102,
+      "options": {
+        "displayMode": "basic",
+        "orientation": "horizontal",
+        "reduceOptions": {
+          "calcs": [],
+          "fields": "/^Memory$/",
+          "values": true
+        },
+        "showUnfilled": true
+      },
+      "targets": [
+        {
+          "columns": [
+            {
+              "selector": "name",
+              "text": "Host",
+              "type": "string"
+            },
+            {
+              "selector": "powerState",
+              "text": "Power",
+              "type": "string"
+            },
+            {
+              "selector": "stats.cpuUsage",
+              "text": "CPU",
+              "type": "number"
+            },
+            {
+              "selector": "stats.usedMemory",
+              "text": "Used memory",
+              "type": "number"
+            },
+            {
+              "selector": "stats.maxMemory",
+              "text": "Max memory",
+              "type": "number"
+            },
+            {
+              "selector": "stats.netTxUsage",
+              "text": "Net Tx",
+              "type": "number"
+            },
+            {
+              "selector": "stats.netRxUsage",
+              "text": "Net Rx",
+              "type": "number"
+            },
+            {
+              "selector": "stats.totalIOPS",
+              "text": "IOPS",
+              "type": "number"
+            },
+            {
+              "selector": "stats.usedSwap",
+              "text": "Swap used",
+              "type": "number"
+            },
+            {
+              "selector": "stats.ts",
+              "text": "Sampled at",
+              "type": "string"
+            }
+          ],
+          "datasource": {
+            "type": "yesoreyeram-infinity-datasource",
+            "uid": "${DS_MORPHEUS}"
+          },
+          "format": "table",
+          "parser": "backend",
+          "refId": "A",
+          "root_selector": "servers",
+          "source": "url",
+          "type": "json",
+          "url": "/api/servers?max=200&clusterId=${cluster}",
+          "url_options": {
+            "data": "",
+            "method": "GET"
+          }
+        }
+      ],
+      "title": "Memory used",
+      "transformations": [
+        {
+          "id": "calculateField",
+          "options": {
+            "alias": "Memory",
+            "binary": {
+              "left": "Used memory",
+              "operator": "/",
+              "right": "Max memory"
+            },
+            "mode": "binary",
+            "replaceFields": false
+          }
+        },
+        {
+          "id": "organize",
+          "options": {
+            "excludeByName": {
+              "Power": true,
+              "Sampled at": true
+            },
+            "indexByName": {
+              "Host": 0
+            },
+            "renameByName": {}
+          }
+        }
+      ],
+      "type": "bargauge"
+    },
+    {
+      "datasource": {
+        "type": "yesoreyeram-infinity-datasource",
+        "uid": "${DS_MORPHEUS}"
+      },
+      "fieldConfig": {
+        "defaults": {},
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "CPU"
+            },
+            "properties": [
+              {
+                "id": "unit",
+                "value": "percent"
+              },
+              {
+                "id": "decimals",
+                "value": 1
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Used memory"
+            },
+            "properties": [
+              {
+                "id": "unit",
+                "value": "bytes"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Max memory"
+            },
+            "properties": [
+              {
+                "id": "unit",
+                "value": "bytes"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Swap used"
+            },
+            "properties": [
+              {
+                "id": "unit",
+                "value": "bytes"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Memory"
+            },
+            "properties": [
+              {
+                "id": "unit",
+                "value": "percentunit"
+              },
+              {
+                "id": "decimals",
+                "value": 1
+              }
+            ]
+          }
+        ]
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 33
+      },
+      "id": 103,
+      "targets": [
+        {
+          "columns": [
+            {
+              "selector": "name",
+              "text": "Host",
+              "type": "string"
+            },
+            {
+              "selector": "powerState",
+              "text": "Power",
+              "type": "string"
+            },
+            {
+              "selector": "stats.cpuUsage",
+              "text": "CPU",
+              "type": "number"
+            },
+            {
+              "selector": "stats.usedMemory",
+              "text": "Used memory",
+              "type": "number"
+            },
+            {
+              "selector": "stats.maxMemory",
+              "text": "Max memory",
+              "type": "number"
+            },
+            {
+              "selector": "stats.netTxUsage",
+              "text": "Net Tx",
+              "type": "number"
+            },
+            {
+              "selector": "stats.netRxUsage",
+              "text": "Net Rx",
+              "type": "number"
+            },
+            {
+              "selector": "stats.totalIOPS",
+              "text": "IOPS",
+              "type": "number"
+            },
+            {
+              "selector": "stats.usedSwap",
+              "text": "Swap used",
+              "type": "number"
+            },
+            {
+              "selector": "stats.ts",
+              "text": "Sampled at",
+              "type": "string"
+            }
+          ],
+          "datasource": {
+            "type": "yesoreyeram-infinity-datasource",
+            "uid": "${DS_MORPHEUS}"
+          },
+          "format": "table",
+          "parser": "backend",
+          "refId": "A",
+          "root_selector": "servers",
+          "source": "url",
+          "type": "json",
+          "url": "/api/servers?max=200&clusterId=${cluster}",
+          "url_options": {
+            "data": "",
+            "method": "GET"
+          }
+        }
+      ],
+      "title": "Hosts / nodes",
+      "transformations": [
+        {
+          "id": "calculateField",
+          "options": {
+            "alias": "Memory",
+            "binary": {
+              "left": "Used memory",
+              "operator": "/",
+              "right": "Max memory"
+            },
+            "mode": "binary",
+            "replaceFields": false
+          }
+        },
+        {
+          "id": "organize",
+          "options": {
+            "excludeByName": {},
+            "indexByName": {
+              "CPU": 2,
+              "Host": 0,
+              "IOPS": 8,
+              "Max memory": 5,
+              "Memory": 3,
+              "Net Rx": 7,
+              "Net Tx": 6,
+              "Power": 1,
+              "Sampled at": 10,
+              "Swap used": 9,
+              "Used memory": 4
+            },
+            "renameByName": {}
+          }
+        }
+      ],
+      "type": "table"
+    },
+    {
+      "collapsed": false,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 41
+      },
+      "id": 108,
+      "panels": [],
+      "title": "Morpheus appliance",
+      "type": "row"
+    },
+    {
+      "datasource": {
+        "type": "yesoreyeram-infinity-datasource",
+        "uid": "${DS_MORPHEUS}"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "decimals": 1,
+          "max": 100,
+          "min": 0,
+          "unit": "percent"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 4,
+        "x": 0,
+        "y": 42
+      },
+      "id": 109,
+      "options": {
+        "colorMode": "none",
+        "graphMode": "none",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "/^CPU$/",
+          "values": false
+        },
+        "textMode": "value"
+      },
+      "targets": [
+        {
+          "columns": [
+            {
+              "selector": "cpu.cpuTotalLoad",
+              "text": "CPU",
+              "type": "number"
+            },
+            {
+              "selector": "memory.memoryPercent",
+              "text": "JVM memory",
+              "type": "number"
+            },
+            {
+              "selector": "memory.systemMemoryPercent",
+              "text": "System memory",
+              "type": "number"
+            },
+            {
+              "selector": "storage.percent",
+              "text": "Storage",
+              "type": "number"
+            },
+            {
+              "selector": "elastic.status",
+              "text": "Elasticsearch",
+              "type": "string"
+            },
+            {
+              "selector": "rabbit.status",
+              "text": "RabbitMQ",
+              "type": "string"
+            },
+            {
+              "selector": "database.status",
+              "text": "Database",
+              "type": "string"
+            }
+          ],
+          "datasource": {
+            "type": "yesoreyeram-infinity-datasource",
+            "uid": "${DS_MORPHEUS}"
+          },
+          "format": "table",
+          "parser": "backend",
+          "refId": "A",
+          "root_selector": "health",
+          "source": "url",
+          "type": "json",
+          "url": "/api/health",
+          "url_options": {
+            "data": "",
+            "method": "GET"
+          }
+        }
+      ],
+      "title": "CPU",
+      "type": "stat"
+    },
+    {
+      "datasource": {
+        "type": "yesoreyeram-infinity-datasource",
+        "uid": "${DS_MORPHEUS}"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "decimals": 1,
+          "max": 1,
+          "min": 0,
+          "unit": "percentunit"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 4,
+        "x": 4,
+        "y": 42
+      },
+      "id": 110,
+      "options": {
+        "colorMode": "none",
+        "graphMode": "none",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "/^JVM memory$/",
+          "values": false
+        },
+        "textMode": "value"
+      },
+      "targets": [
+        {
+          "columns": [
+            {
+              "selector": "cpu.cpuTotalLoad",
+              "text": "CPU",
+              "type": "number"
+            },
+            {
+              "selector": "memory.memoryPercent",
+              "text": "JVM memory",
+              "type": "number"
+            },
+            {
+              "selector": "memory.systemMemoryPercent",
+              "text": "System memory",
+              "type": "number"
+            },
+            {
+              "selector": "storage.percent",
+              "text": "Storage",
+              "type": "number"
+            },
+            {
+              "selector": "elastic.status",
+              "text": "Elasticsearch",
+              "type": "string"
+            },
+            {
+              "selector": "rabbit.status",
+              "text": "RabbitMQ",
+              "type": "string"
+            },
+            {
+              "selector": "database.status",
+              "text": "Database",
+              "type": "string"
+            }
+          ],
+          "datasource": {
+            "type": "yesoreyeram-infinity-datasource",
+            "uid": "${DS_MORPHEUS}"
+          },
+          "format": "table",
+          "parser": "backend",
+          "refId": "A",
+          "root_selector": "health",
+          "source": "url",
+          "type": "json",
+          "url": "/api/health",
+          "url_options": {
+            "data": "",
+            "method": "GET"
+          }
+        }
+      ],
+      "title": "JVM memory",
+      "type": "stat"
+    },
+    {
+      "datasource": {
+        "type": "yesoreyeram-infinity-datasource",
+        "uid": "${DS_MORPHEUS}"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "decimals": 1,
+          "max": 1,
+          "min": 0,
+          "unit": "percentunit"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 4,
+        "x": 8,
+        "y": 42
+      },
+      "id": 111,
+      "options": {
+        "colorMode": "none",
+        "graphMode": "none",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "/^System memory$/",
+          "values": false
+        },
+        "textMode": "value"
+      },
+      "targets": [
+        {
+          "columns": [
+            {
+              "selector": "cpu.cpuTotalLoad",
+              "text": "CPU",
+              "type": "number"
+            },
+            {
+              "selector": "memory.memoryPercent",
+              "text": "JVM memory",
+              "type": "number"
+            },
+            {
+              "selector": "memory.systemMemoryPercent",
+              "text": "System memory",
+              "type": "number"
+            },
+            {
+              "selector": "storage.percent",
+              "text": "Storage",
+              "type": "number"
+            },
+            {
+              "selector": "elastic.status",
+              "text": "Elasticsearch",
+              "type": "string"
+            },
+            {
+              "selector": "rabbit.status",
+              "text": "RabbitMQ",
+              "type": "string"
+            },
+            {
+              "selector": "database.status",
+              "text": "Database",
+              "type": "string"
+            }
+          ],
+          "datasource": {
+            "type": "yesoreyeram-infinity-datasource",
+            "uid": "${DS_MORPHEUS}"
+          },
+          "format": "table",
+          "parser": "backend",
+          "refId": "A",
+          "root_selector": "health",
+          "source": "url",
+          "type": "json",
+          "url": "/api/health",
+          "url_options": {
+            "data": "",
+            "method": "GET"
+          }
+        }
+      ],
+      "title": "System memory",
+      "type": "stat"
+    },
+    {
+      "datasource": {
+        "type": "yesoreyeram-infinity-datasource",
+        "uid": "${DS_MORPHEUS}"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "decimals": 1,
+          "max": 100,
+          "min": 0,
+          "unit": "percent"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 4,
+        "x": 12,
+        "y": 42
+      },
+      "id": 112,
+      "options": {
+        "colorMode": "none",
+        "graphMode": "none",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "/^Storage$/",
+          "values": false
+        },
+        "textMode": "value"
+      },
+      "targets": [
+        {
+          "columns": [
+            {
+              "selector": "cpu.cpuTotalLoad",
+              "text": "CPU",
+              "type": "number"
+            },
+            {
+              "selector": "memory.memoryPercent",
+              "text": "JVM memory",
+              "type": "number"
+            },
+            {
+              "selector": "memory.systemMemoryPercent",
+              "text": "System memory",
+              "type": "number"
+            },
+            {
+              "selector": "storage.percent",
+              "text": "Storage",
+              "type": "number"
+            },
+            {
+              "selector": "elastic.status",
+              "text": "Elasticsearch",
+              "type": "string"
+            },
+            {
+              "selector": "rabbit.status",
+              "text": "RabbitMQ",
+              "type": "string"
+            },
+            {
+              "selector": "database.status",
+              "text": "Database",
+              "type": "string"
+            }
+          ],
+          "datasource": {
+            "type": "yesoreyeram-infinity-datasource",
+            "uid": "${DS_MORPHEUS}"
+          },
+          "format": "table",
+          "parser": "backend",
+          "refId": "A",
+          "root_selector": "health",
+          "source": "url",
+          "type": "json",
+          "url": "/api/health",
+          "url_options": {
+            "data": "",
+            "method": "GET"
+          }
+        }
+      ],
+      "title": "Storage",
+      "type": "stat"
+    },
+    {
+      "datasource": {
+        "type": "yesoreyeram-infinity-datasource",
+        "uid": "${DS_MORPHEUS}"
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 8,
+        "x": 16,
+        "y": 42
+      },
+      "id": 113,
+      "targets": [
+        {
+          "columns": [
+            {
+              "selector": "cpu.cpuTotalLoad",
+              "text": "CPU",
+              "type": "number"
+            },
+            {
+              "selector": "memory.memoryPercent",
+              "text": "JVM memory",
+              "type": "number"
+            },
+            {
+              "selector": "memory.systemMemoryPercent",
+              "text": "System memory",
+              "type": "number"
+            },
+            {
+              "selector": "storage.percent",
+              "text": "Storage",
+              "type": "number"
+            },
+            {
+              "selector": "elastic.status",
+              "text": "Elasticsearch",
+              "type": "string"
+            },
+            {
+              "selector": "rabbit.status",
+              "text": "RabbitMQ",
+              "type": "string"
+            },
+            {
+              "selector": "database.status",
+              "text": "Database",
+              "type": "string"
+            }
+          ],
+          "datasource": {
+            "type": "yesoreyeram-infinity-datasource",
+            "uid": "${DS_MORPHEUS}"
+          },
+          "format": "table",
+          "parser": "backend",
+          "refId": "A",
+          "root_selector": "health",
+          "source": "url",
+          "type": "json",
+          "url": "/api/health",
+          "url_options": {
+            "data": "",
+            "method": "GET"
+          }
+        }
+      ],
+      "title": "Services",
+      "transformations": [
+        {
+          "id": "organize",
+          "options": {
+            "excludeByName": {
+              "CPU": true,
+              "JVM memory": true,
+              "Storage": true,
+              "System memory": true
+            },
+            "indexByName": {
+              "Database": 0,
+              "Elasticsearch": 1,
+              "RabbitMQ": 2
+            },
+            "renameByName": {}
+          }
+        }
+      ],
+      "type": "table"
+    },
+    {
+      "datasource": {
+        "type": "yesoreyeram-infinity-datasource",
+        "uid": "${DS_MORPHEUS}"
+      },
+      "gridPos": {
+        "h": 6,
+        "w": 12,
+        "x": 0,
+        "y": 46
+      },
+      "id": 114,
+      "targets": [
+        {
+          "columns": [
+            {
+              "selector": "path",
+              "text": "Path",
+              "type": "string"
+            },
+            {
+              "selector": "name",
+              "text": "Device",
+              "type": "string"
+            },
+            {
+              "selector": "percent",
+              "text": "Used %",
+              "type": "number"
+            },
+            {
+              "selector": "total",
+              "text": "Size",
+              "type": "number"
+            }
+          ],
+          "datasource": {
+            "type": "yesoreyeram-infinity-datasource",
+            "uid": "${DS_MORPHEUS}"
+          },
+          "format": "table",
+          "parser": "backend",
+          "refId": "A",
+          "root_selector": "health.storage.files",
+          "source": "url",
+          "type": "json",
+          "url": "/api/health",
+          "url_options": {
+            "data": "",
+            "method": "GET"
+          }
+        }
+      ],
+      "title": "Appliance storage",
+      "transformations": [
+        {
+          "id": "organize",
+          "options": {
+            "excludeByName": {},
+            "indexByName": {
+              "Device": 1,
+              "Path": 0,
+              "Size": 3,
+              "Used %": 2
+            },
+            "renameByName": {}
+          }
+        }
+      ],
+      "type": "table"
+    },
+    {
+      "datasource": {
+        "type": "yesoreyeram-infinity-datasource",
+        "uid": "${DS_MORPHEUS}"
+      },
+      "gridPos": {
+        "h": 6,
+        "w": 12,
+        "x": 12,
+        "y": 46
+      },
+      "id": 115,
+      "targets": [
+        {
+          "columns": [
+            {
+              "selector": "name",
+              "text": "Cloud",
+              "type": "string"
+            },
+            {
+              "selector": "zoneType.name",
+              "text": "Type",
+              "type": "string"
+            },
+            {
+              "selector": "status",
+              "text": "Status",
+              "type": "string"
+            },
+            {
+              "selector": "lastSync",
+              "text": "Last sync",
+              "type": "string"
+            }
+          ],
+          "datasource": {
+            "type": "yesoreyeram-infinity-datasource",
+            "uid": "${DS_MORPHEUS}"
+          },
+          "format": "table",
+          "parser": "backend",
+          "refId": "A",
+          "root_selector": "zones",
+          "source": "url",
+          "type": "json",
+          "url": "/api/zones?max=100",
+          "url_options": {
+            "data": "",
+            "method": "GET"
+          }
+        }
+      ],
+      "title": "Clouds",
+      "transformations": [
+        {
+          "id": "organize",
+          "options": {
+            "excludeByName": {},
+            "indexByName": {
+              "Cloud": 0,
+              "Last sync": 3,
+              "Status": 2,
+              "Type": 1
+            },
+            "renameByName": {}
+          }
+        }
+      ],
+      "type": "table"
+    },
+    {
+      "collapsed": false,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 52
+      },
+      "id": 116,
+      "panels": [],
+      "title": "Monitoring",
+      "type": "row"
+    },
+    {
+      "datasource": {
+        "type": "yesoreyeram-infinity-datasource",
+        "uid": "${DS_MORPHEUS}"
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 14,
+        "x": 0,
+        "y": 53
+      },
+      "id": 117,
+      "targets": [
+        {
+          "columns": [
+            {
+              "selector": "name",
+              "text": "Check",
+              "type": "string"
+            },
+            {
+              "selector": "checkType.name",
+              "text": "Type",
+              "type": "string"
+            },
+            {
+              "selector": "health",
+              "text": "Health",
+              "type": "number"
+            },
+            {
+              "selector": "lastRunDate",
+              "text": "Last run",
+              "type": "string"
+            },
+            {
+              "selector": "lastError",
+              "text": "Last error",
+              "type": "string"
+            }
+          ],
+          "datasource": {
+            "type": "yesoreyeram-infinity-datasource",
+            "uid": "${DS_MORPHEUS}"
+          },
+          "format": "table",
+          "parser": "backend",
+          "refId": "A",
+          "root_selector": "checks",
+          "source": "url",
+          "type": "json",
+          "url": "/api/monitoring/checks?max=200",
+          "url_options": {
+            "data": "",
+            "method": "GET"
+          }
+        }
+      ],
+      "title": "Checks",
+      "transformations": [
+        {
+          "id": "organize",
+          "options": {
+            "excludeByName": {},
+            "indexByName": {
+              "Check": 0,
+              "Health": 2,
+              "Last error": 4,
+              "Last run": 3,
+              "Type": 1
+            },
+            "renameByName": {}
+          }
+        }
+      ],
+      "type": "table"
+    },
+    {
+      "datasource": {
+        "type": "yesoreyeram-infinity-datasource",
+        "uid": "${DS_MORPHEUS}"
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 10,
+        "x": 14,
+        "y": 53
+      },
+      "id": 118,
+      "targets": [
+        {
+          "columns": [
+            {
+              "selector": "displayName",
+              "text": "Incident",
+              "type": "string"
+            },
+            {
+              "selector": "status",
+              "text": "Status",
+              "type": "string"
+            },
+            {
+              "selector": "severity",
+              "text": "Severity",
+              "type": "string"
+            },
+            {
+              "selector": "startDate",
+              "text": "Start",
+              "type": "string"
+            }
+          ],
+          "datasource": {
+            "type": "yesoreyeram-infinity-datasource",
+            "uid": "${DS_MORPHEUS}"
+          },
+          "format": "table",
+          "parser": "backend",
+          "refId": "A",
+          "root_selector": "incidents",
+          "source": "url",
+          "type": "json",
+          "url": "/api/monitoring/incidents?max=50",
+          "url_options": {
+            "data": "",
+            "method": "GET"
+          }
+        }
+      ],
+      "title": "Incidents",
+      "transformations": [
+        {
+          "id": "organize",
+          "options": {
+            "excludeByName": {},
+            "indexByName": {
+              "Incident": 0,
+              "Severity": 2,
+              "Start": 3,
+              "Status": 1
+            },
+            "renameByName": {}
+          }
+        }
+      ],
+      "type": "table"
+    },
+    {
+      "id": 119,
+      "type": "row",
+      "title": "Virtual machines (last sample Morpheus holds)",
+      "collapsed": false,
+      "panels": [],
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 61
+      }
+    },
+    {
+      "datasource": {
+        "type": "yesoreyeram-infinity-datasource",
+        "uid": "${DS_MORPHEUS}"
+      },
+      "fieldConfig": {
+        "defaults": {},
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Used memory"
+            },
+            "properties": [
+              {
+                "id": "unit",
+                "value": "bytes"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Max memory"
+            },
+            "properties": [
+              {
+                "id": "unit",
+                "value": "bytes"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Used disk"
+            },
+            "properties": [
+              {
+                "id": "unit",
+                "value": "bytes"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Max disk"
+            },
+            "properties": [
+              {
+                "id": "unit",
+                "value": "bytes"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "CPU"
+            },
+            "properties": [
+              {
+                "id": "unit",
+                "value": "percent"
+              },
+              {
+                "id": "decimals",
+                "value": 1
+              }
+            ]
+          }
+        ]
+      },
+      "gridPos": {
+        "h": 10,
+        "w": 24,
+        "x": 0,
+        "y": 62
+      },
+      "id": 120,
+      "targets": [
+        {
+          "columns": [
+            {
+              "selector": "name",
+              "text": "VM",
+              "type": "string"
+            },
+            {
+              "selector": "powerState",
+              "text": "Power",
+              "type": "string"
+            },
+            {
+              "selector": "stats.cpuUsage",
+              "text": "CPU",
+              "type": "number"
+            },
+            {
+              "selector": "stats.usedMemory",
+              "text": "Used memory",
+              "type": "number"
+            },
+            {
+              "selector": "stats.maxMemory",
+              "text": "Max memory",
+              "type": "number"
+            },
+            {
+              "selector": "stats.usedStorage",
+              "text": "Used disk",
+              "type": "number"
+            },
+            {
+              "selector": "stats.maxStorage",
+              "text": "Max disk",
+              "type": "number"
+            },
+            {
+              "selector": "stats.netTxUsage",
+              "text": "Net Tx",
+              "type": "number"
+            },
+            {
+              "selector": "stats.netRxUsage",
+              "text": "Net Rx",
+              "type": "number"
+            },
+            {
+              "selector": "stats.totalIOPS",
+              "text": "IOPS",
+              "type": "number"
+            },
+            {
+              "selector": "stats.ts",
+              "text": "Sampled at",
+              "type": "string"
+            }
+          ],
+          "datasource": {
+            "type": "yesoreyeram-infinity-datasource",
+            "uid": "${DS_MORPHEUS}"
+          },
+          "format": "table",
+          "parser": "backend",
+          "refId": "A",
+          "root_selector": "servers",
+          "source": "url",
+          "type": "json",
+          "url": "/api/servers?max=500&vm=true&zoneId=${cloud}",
+          "url_options": {
+            "data": "",
+            "method": "GET"
+          }
+        }
+      ],
+      "title": "${cloud:text}",
+      "transformations": [
+        {
+          "id": "organize",
+          "options": {
+            "excludeByName": {},
+            "indexByName": {
+              "CPU": 2,
+              "IOPS": 9,
+              "Max disk": 6,
+              "Max memory": 4,
+              "Net Rx": 8,
+              "Net Tx": 7,
+              "Power": 1,
+              "Sampled at": 10,
+              "Used disk": 5,
+              "Used memory": 3,
+              "VM": 0
+            },
+            "renameByName": {}
+          }
+        }
+      ],
+      "type": "table",
+      "repeat": "cloud",
+      "repeatDirection": "v"
+    }
+  ]
+}

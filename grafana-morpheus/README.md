@@ -103,3 +103,15 @@ Admin steps, once per Morpheus (master tenant, System Admin):
 Lab objects (hpetrlab): option list Groups 24; Connect Morpheus = catalog item 18, form 23,
 workflow 24 (task 53 setup, then task 52 connect). The separate Setup Reader Access item
 (19, workflow 25, form 24) was removed in v1.6.0.
+
+## Importable dashboards (no catalog)
+
+`dashboards/` holds the two dashboards for sites that set Grafana up by hand:
+
+| File | Import input | Needs |
+|---|---|---|
+| `morpheus-overview.json` | Infinity data source (its URL = the Morpheus base URL, Bearer token of the read-only user) | Cluster and Cloud variables fill from `/api/clusters` and `/api/zones`; one performance row per selected cluster, one VM table per selected cloud |
+| `kubernetes-pods.json` | Prometheus data source | node-exporter, kube-state-metrics and kubelet metrics (kube-prometheus) |
+
+Panels use relative paths (`/api/...`); Infinity prefixes the data source URL. Tested on Grafana
+13.2.2 with Infinity 4.0.0 against Morpheus 9.0.2.
