@@ -1,7 +1,8 @@
 # App Spec of the "Grafana" catalog item (type Blueprint -> Helm blueprint "Grafana", form "Grafana").
 # The chart in grafana-chart/ is the upstream grafana-community chart 13.2.5, unchanged; everything
 # lab-specific is set here as Helm values (templateParameter.values, passed with -f):
-#   service      NodePort from the form, published at http://apps.hpetrlab.local:<nodePort>
+#   service      NodePort from the form, reached at http://<Public Address>:<nodePort>
+#   group        Group from the form (option list "Groups")
 #   persistence  PVC on the StorageClass and size chosen in the form
 #   adminPassword from the form (lands in the chart's Secret; also stored in the order in Morpheus)
 # Namespace: defaultPool.id - the namespace option list returns "pool-<id>", the App Spec needs the id.
@@ -9,7 +10,7 @@ id: 6
 templateId: 6
 type: helm
 name: <%= customOptions.appName %>
-description: 'Grafana: http://apps.hpetrlab.local:<%= customOptions.nodePort %> (user admin)'
+description: 'Grafana: http://<%= customOptions.publicHost %>:<%= customOptions.nodePort %> (user admin)'
 category: monitoring
 helm:
   git:
@@ -20,8 +21,7 @@ helm:
   configType: git
 needsReset: true
 group:
-  id: 1
-  code: all-clouds
+  id: <%= customOptions.group %>
 environment: <%= customOptions.environment %>
 defaultPool:
   id: <%= customOptions.namespace.toString().replace('pool-', '') %>

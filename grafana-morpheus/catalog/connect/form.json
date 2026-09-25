@@ -1,4 +1,81 @@
-{"optionTypeForm": {"name": "Grafana - Connect Morpheus", "code": "grafana-connect-morpheus", "description": "Order form of the Grafana - Connect Morpheus catalog item", "options": [
- {"fieldName": "grafanaApp", "fieldLabel": "Grafana App", "fieldContext": "config.customOptions", "type": "select", "required": true, "optionSource": "list", "optionList": {"id": 22}, "displayOrder": 0, "helpBlock": "A Grafana ordered from the Grafana catalog item."},
- {"fieldName": "grafanaPassword", "fieldLabel": "Grafana Admin Password", "fieldContext": "config.customOptions", "type": "password", "required": false, "displayOrder": 1, "helpBlock": "Needed on the first run for this Grafana; stored in Cypher and reused when left empty."}
-]}}
+{
+ "optionTypeForm": {
+  "name": "Grafana - Connect Morpheus",
+  "code": "grafana-connect-morpheus",
+  "description": "Order form of the Grafana - Connect Morpheus catalog item",
+  "options": [
+   {
+    "fieldName": "grafanaApp",
+    "fieldLabel": "Grafana App",
+    "fieldContext": "config.customOptions",
+    "type": "select",
+    "required": true,
+    "optionSource": "list",
+    "optionList": {
+     "id": 22
+    },
+    "displayOrder": 0,
+    "helpBlock": "A Grafana ordered from the Grafana catalog item."
+   },
+   {
+    "fieldName": "grafanaPassword",
+    "fieldLabel": "Grafana Admin Password",
+    "fieldContext": "config.customOptions",
+    "type": "password",
+    "required": false,
+    "displayOrder": 1,
+    "helpBlock": "Needed on the first run for this Grafana; stored in Cypher and reused when left empty."
+   },
+   {
+    "fieldName": "prometheusUrl",
+    "fieldLabel": "Prometheus URL",
+    "fieldContext": "config.customOptions",
+    "type": "text",
+    "required": false,
+    "defaultValue": "http://prometheus-k8s.monitoring.svc:9090",
+    "displayOrder": 2,
+    "helpBlock": "Prometheus as Grafana reaches it (kube-prometheus default shown). Empty = no Kubernetes Pods dashboard; a URL that does not answer is skipped."
+   },
+   {
+    "fieldName": "morpheusUrl",
+    "fieldLabel": "Morpheus URL (from Grafana)",
+    "fieldContext": "config.customOptions",
+    "type": "text",
+    "required": false,
+    "displayOrder": 3,
+    "helpBlock": "Morpheus address Grafana should call, e.g. the load balancer or the single node name. Empty = this appliance's URL."
+   },
+   {
+    "fieldName": "readerUsername",
+    "fieldLabel": "Reader Username",
+    "fieldContext": "config.customOptions",
+    "type": "text",
+    "required": true,
+    "defaultValue": "grafana-reader",
+    "verifyPattern": "^[A-Za-z0-9][A-Za-z0-9._-]{2,49}$",
+    "displayOrder": 4,
+    "helpBlock": "Read-only Morpheus API user Grafana uses. Created if missing; an existing user is reused, never duplicated."
+   },
+   {
+    "fieldName": "readerPassword",
+    "fieldLabel": "Reader Password",
+    "fieldContext": "config.customOptions",
+    "type": "password",
+    "required": false,
+    "displayOrder": 5,
+    "helpBlock": "Optional. Empty: a random password for a new user, no change for an existing one. Typed: set on the user and stored in Cypher."
+   },
+   {
+    "fieldName": "tokenDays",
+    "fieldLabel": "Token lifetime (days)",
+    "fieldContext": "config.customOptions",
+    "type": "text",
+    "required": true,
+    "defaultValue": "365",
+    "verifyPattern": "^[0-9]{1,4}$",
+    "displayOrder": 6,
+    "helpBlock": "How long the reader API token stays valid. Order this item again before it expires."
+   }
+  ]
+ }
+}

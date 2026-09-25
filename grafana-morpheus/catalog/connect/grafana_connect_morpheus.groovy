@@ -9,7 +9,18 @@ import javax.net.ssl.SSLSession
 import java.security.cert.X509Certificate
 
 // =============================================================================
-// grafana_connect_morpheus.groovy  (v1.4.0 - VM tables, Prometheus pods dashboard)
+// grafana_connect_morpheus.groovy  (v1.6.0 - reader user from the form)
+// v1.6.0: runs as the second task of the "Grafana - Connect Morpheus" workflow,
+//         after grafana_setup_reader.groovy (the separate Setup item is gone).
+//         The reader username comes from the form field readerUsername
+//         (default grafana-reader); password and token are kept in Cypher
+//         secret/<user>-password and secret/<user>-token.
+// v1.5.0: Prometheus URL and the Morpheus URL Grafana should call come from the
+//         form (Prometheus empty = no pods dashboard; Morpheus empty = the
+//         appliance URL). A Prometheus data source that does not answer is
+//         deleted instead of being left broken; data source renamed to
+//         'Prometheus' (the old 'Prometheus HKS' is removed). Clusters without
+//         hosts get no performance row.
 // v1.4.0: one 'Virtual machines' table per cloud (/api/servers?vm=true, last
 //         sample: CPU, memory, disk, network, IOPS); data source 'Prometheus HKS'
 //         (kube-prometheus in the cluster Grafana runs in) and a second
@@ -33,9 +44,9 @@ import java.security.cert.X509Certificate
 //
 // Catalog item "Grafana - Connect Morpheus". Points a Grafana deployed from the
 // "Grafana" catalog item at this Morpheus appliance:
-//   1. mints a fresh API token for the read-only service user grafana-reader
-//      (password in Cypher secret/grafana-reader-password) with the OAuth client
-//      'grafana' (1-year tokens) and stores it in Cypher secret/grafana-reader-token
+//   1. mints a fresh API token for the read-only service user (readerUsername,
+//      password in Cypher secret/<user>-password) with the OAuth client
+//      'grafana' and stores it in Cypher secret/<user>-token
 //   2. installs the Infinity data source plugin in Grafana (skipped if present)
 //   3. creates or updates the data source "Morpheus" (Bearer token, kept by
 //      Grafana in its encrypted secureJsonData)
@@ -51,17 +62,22 @@ import java.security.cert.X509Certificate
 //
 // Inputs (Form Inputs, customOptions):
 //   grafanaApp      : app name (Select, Option List "Helm Apps")
+//   prometheusUrl   : optional, e.g. http://prometheus-k8s.monitoring.svc:9090
+//                     (kube-prometheus in the cluster Grafana runs in); empty =
+//                     skip the Kubernetes Pods dashboard
+//   morpheusUrl     : optional, the Morpheus URL as Grafana can reach it (single
+//                     node, load balancer, ...); empty = the appliance URL
 //   grafanaPassword : Grafana admin password (Password, optional after the
 //                     first run)
+//   readerUsername  : read-only Morpheus API user (default grafana-reader)
 // =============================================================================
 
 final String PLUGIN_ID   = "yesoreyeram-infinity-datasource"
 final String DS_NAME     = "Morpheus"
 final String DASH_UID    = "morpheus-overview"
-final String PROM_NAME   = "Prometheus HKS"
-final String PROM_URL    = "http://prometheus-k8s.monitoring.svc:9090"
+final String PROM_NAME   = "Prometheus"
+final String OLD_PROM    = "Prometheus HKS"
 final String PODS_UID    = "kubernetes-pods"
-final String READER_USER = "grafana-reader"
 final String OAUTH_CLIENT = "grafana"
 
 def opts = [
@@ -74,6 +90,11 @@ def opts = [
 if (opts == null) {
     throw new RuntimeException("customOptions not accessible from this Groovy task context.")
 }
+// Reader user from the form (same field the setup step uses); its password and
+// token live in Cypher under secret/<user>-password and secret/<user>-token.
+final String READER_USER = (opts.readerUsername ?: "grafana-reader").toString().trim()
+final String PW_KEY      = "secret/" + READER_USER + "-password"
+final String TOKEN_KEY   = "secret/" + READER_USER + "-token"
 
 def applianceUrl = morpheus.applianceUrl?.toString()?.replaceAll('/+$', '')
 def bearerToken  = morpheus.apiAccessToken?.toString()
@@ -179,9 +200,9 @@ if (hCode >= 400) {
 }
 
 // --- 2. fresh token for grafana-reader ------------------------------------------
-def readerPassword = cypherRead("secret/grafana-reader-password")
+def readerPassword = cypherRead(PW_KEY)
 if (!readerPassword) {
-    throw new RuntimeException("Cypher secret/grafana-reader-password is missing - the grafana-reader service user is not set up.")
+    throw new RuntimeException("Cypher ${PW_KEY} is missing - the ${READER_USER} service user is not set up.")
 }
 def form = "grant_type=password&scope=write&client_id=" + URLEncoder.encode(OAUTH_CLIENT, "UTF-8") +
         "&username=" + URLEncoder.encode(READER_USER, "UTF-8") +
@@ -192,7 +213,7 @@ def readerToken = (tJson instanceof Map) ? tJson.access_token?.toString() : null
 if (tCode >= 400 || !readerToken) {
     throw new RuntimeException("Could not get a token for ${READER_USER} (HTTP ${tCode}).")
 }
-cypherWrite("secret/grafana-reader-token", readerToken)
+cypherWrite(TOKEN_KEY, readerToken)
 
 // --- 3. Infinity plugin ------------------------------------------------------------
 def (pCode, pJson, pBody) = grafana("GET", "/api/plugins/" + PLUGIN_ID + "/settings", null)
@@ -207,7 +228,11 @@ if (pCode == 404) {
 }
 
 // --- 4. data source ----------------------------------------------------------------
-def morpheusHost = new URL(applianceUrl)
+def morpheusUrlOpt = opts.morpheusUrl?.toString()?.trim()?.replaceAll('/+$', '')
+if (morpheusUrlOpt && !(morpheusUrlOpt ==~ /^https?:\/\/[^\s\/]+$/)) {
+    throw new RuntimeException("Morpheus URL must look like https://morpheus.example.local (no path), got '${morpheusUrlOpt}'.")
+}
+def morpheusHost = new URL(morpheusUrlOpt ?: applianceUrl)
 def morpheusBase = morpheusHost.protocol + "://" + morpheusHost.authority
 def dsBody = [
     name          : DS_NAME,
@@ -259,6 +284,8 @@ int pid = 100
 int py = 32
 def clusterList = (morpheusGet("/api/clusters?max=50")?.clusters ?: []).sort { it.name?.toString() }
 clusterList.each { c ->
+    def hostCount = morpheusGet("/api/servers?max=1&clusterId=" + c.id)?.meta?.total ?: 0
+    if (hostCount == 0) { return }
     def path = "/api/servers?max=200&clusterId=" + c.id
     def cols = [["name", "Host", "string"], ["powerState", "Power", "string"],
                 ["stats.cpuUsage", "CPU", "number"], ["stats.usedMemory", "Used memory", "number"],
@@ -386,26 +413,38 @@ if (dCode >= 400) {
     throw new RuntimeException("Importing the dashboard failed (HTTP ${dCode}): ${apiMsg(dJson, dBody)}")
 }
 
-// --- 6. Prometheus (kube-prometheus in the cluster this Grafana runs in) -----------
+// --- 6. Prometheus (optional, URL from the form) -----------------------------------
 def promNote
-def promBody = [name: PROM_NAME, type: "prometheus", access: "proxy", url: PROM_URL, jsonData: [timeInterval: "30s"]]
+def promUrl = opts.prometheusUrl?.toString()?.trim()?.replaceAll('/+$', '')
+// Remove the data source name used before v1.5.0.
+def (ogCode, ogJson, ogBody) = grafana("GET", "/api/datasources/name/" + URLEncoder.encode(OLD_PROM, "UTF-8"), null)
+if (ogCode == 200 && ogJson?.uid) { grafana("DELETE", "/api/datasources/uid/" + ogJson.uid, null) }
 def (pgCode, pgJson, pgBody) = grafana("GET", "/api/datasources/name/" + URLEncoder.encode(PROM_NAME, "UTF-8"), null)
 def promUid = null
-if (pgCode == 200 && pgJson?.id) {
-    promBody.uid = pgJson.uid
-    def (puCode, puJson, puBody) = grafana("PUT", "/api/datasources/" + pgJson.id, promBody)
-    if (puCode < 400) { promUid = pgJson.uid }
-} else {
-    def (pcCode, pcJson, pcBody) = grafana("POST", "/api/datasources", promBody)
-    if (pcCode < 400) { promUid = pcJson?.datasource?.uid ?: pcJson?.uid }
-}
 def promOk = false
-if (promUid) {
-    def (phCode, phJson, phBody) = grafana("GET", "/api/datasources/uid/" + promUid + "/health", null)
+if (promUrl) {
+    def promBody = [name: PROM_NAME, type: "prometheus", access: "proxy", url: promUrl, jsonData: [timeInterval: "30s"]]
+    if (pgCode == 200 && pgJson?.id) {
+        promBody.uid = pgJson.uid
+        def (puCode, puJson, puBody) = grafana("PUT", "/api/datasources/" + pgJson.id, promBody)
+        if (puCode < 400) { promUid = pgJson.uid }
+    } else {
+        def (pcCode, pcJson, pcBody) = grafana("POST", "/api/datasources", promBody)
+        if (pcCode < 400) { promUid = pcJson?.datasource?.uid ?: pcJson?.uid }
+    }
+    if (promUid) {
+        def (phCode, phJson, phBody) = grafana("GET", "/api/datasources/uid/" + promUid + "/health", null)
+        promOk = (phCode == 200 && phJson?.status?.toString() == "OK")
+        if (!promOk) { grafana("DELETE", "/api/datasources/uid/" + promUid, null) }
+    }
+} else if (pgCode == 200 && pgJson?.uid) {
+    // No URL given this run: leave an existing working data source alone.
+    def (phCode, phJson, phBody) = grafana("GET", "/api/datasources/uid/" + pgJson.uid + "/health", null)
     promOk = (phCode == 200 && phJson?.status?.toString() == "OK")
+    promUid = pgJson.uid
 }
 if (!promOk) {
-    promNote = "Prometheus at ${PROM_URL} did not answer - pods dashboard skipped"
+    promNote = promUrl ? "Prometheus at ${promUrl} did not answer - data source removed, pods dashboard skipped" : "no Prometheus URL - pods dashboard skipped"
 } else {
     def pds = [type: "prometheus", uid: promUid]
     def ns = 'namespace=~"$namespace"'

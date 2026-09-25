@@ -1,10 +1,129 @@
-{"optionTypeForm": {"name": "Grafana", "code": "grafana", "description": "Order form of the Grafana catalog item", "options": [
- {"fieldName": "appName", "fieldLabel": "App Name", "fieldContext": "config.customOptions", "type": "text", "required": true, "placeHolder": "grafana", "verifyPattern": "^[a-z][a-z0-9-]{1,30}$", "helpBlock": "Lowercase letters, digits and dashes. Used as the app name and the Helm release name.", "displayOrder": 0},
- {"fieldName": "cluster", "fieldLabel": "Kubernetes Cluster", "fieldContext": "config.customOptions", "type": "select", "required": true, "optionSource": "list", "optionList": {"id": 20}, "displayOrder": 1},
- {"fieldName": "environment", "fieldLabel": "Environment", "fieldContext": "config.customOptions", "type": "select", "required": true, "defaultValue": "dev", "optionSource": "list", "optionList": {"id": 21}, "displayOrder": 2},
- {"fieldName": "namespace", "fieldLabel": "Namespace", "fieldContext": "config.customOptions", "type": "select", "required": true, "optionSource": "list", "optionList": {"id": 18}, "dependsOnCode": "cluster", "helpBlock": "Namespaces of the selected cluster you may use.", "displayOrder": 3},
- {"fieldName": "nodePort", "fieldLabel": "NodePort", "fieldContext": "config.customOptions", "type": "text", "required": true, "defaultValue": "31300", "verifyPattern": "^(30[0-9]{3}|31[0-9]{3}|32[0-6][0-9]{2}|327[0-5][0-9]|3276[0-7])$", "helpBlock": "30000-32767, free on the cluster. URL: http://apps.hpetrlab.local:<NodePort>", "displayOrder": 4},
- {"fieldName": "storageClass", "fieldLabel": "Storage Class", "fieldContext": "config.customOptions", "type": "select", "required": true, "optionSource": "list", "optionList": {"id": 19}, "dependsOnCode": "cluster", "helpBlock": "Where Grafana keeps its database and dashboards.", "displayOrder": 5},
- {"fieldName": "storageSize", "fieldLabel": "Storage Size (GB)", "fieldContext": "config.customOptions", "type": "text", "required": true, "defaultValue": "5", "verifyPattern": "^([1-9]|[1-4][0-9]|50)$", "helpBlock": "1-50 GB. Cannot be changed later through the form.", "displayOrder": 6},
- {"fieldName": "adminPassword", "fieldLabel": "Admin Password", "fieldContext": "config.customOptions", "type": "password", "required": true, "verifyPattern": "^[^'\\\\]{8,64}$", "helpBlock": "8-64 characters, no quote or backslash. Login user is admin.", "displayOrder": 7}
-]}}
+{
+ "optionTypeForm": {
+  "name": "Grafana",
+  "code": "grafana",
+  "description": "Order form of the Grafana catalog item",
+  "options": [
+   {
+    "fieldName": "appName",
+    "fieldLabel": "App Name",
+    "fieldContext": "config.customOptions",
+    "type": "text",
+    "required": true,
+    "placeHolder": "grafana",
+    "verifyPattern": "^[a-z][a-z0-9-]{1,30}$",
+    "helpBlock": "Lowercase letters, digits and dashes. Used as the app name and the Helm release name.",
+    "displayOrder": 0
+   },
+   {
+    "fieldName": "group",
+    "fieldLabel": "Group",
+    "fieldContext": "config.customOptions",
+    "type": "select",
+    "required": true,
+    "optionSource": "list",
+    "optionList": {
+     "id": 24
+    },
+    "helpBlock": "Morpheus group the app belongs to.",
+    "displayOrder": 1
+   },
+   {
+    "fieldName": "cluster",
+    "fieldLabel": "Kubernetes Cluster",
+    "fieldContext": "config.customOptions",
+    "type": "select",
+    "required": true,
+    "optionSource": "list",
+    "optionList": {
+     "id": 20
+    },
+    "displayOrder": 2
+   },
+   {
+    "fieldName": "environment",
+    "fieldLabel": "Environment",
+    "fieldContext": "config.customOptions",
+    "type": "select",
+    "required": true,
+    "defaultValue": "dev",
+    "optionSource": "list",
+    "optionList": {
+     "id": 21
+    },
+    "displayOrder": 3
+   },
+   {
+    "fieldName": "namespace",
+    "fieldLabel": "Namespace",
+    "fieldContext": "config.customOptions",
+    "type": "select",
+    "required": true,
+    "optionSource": "list",
+    "optionList": {
+     "id": 18
+    },
+    "dependsOnCode": "cluster",
+    "helpBlock": "Namespaces of the selected cluster you may use.",
+    "displayOrder": 4
+   },
+   {
+    "fieldName": "publicHost",
+    "fieldLabel": "Public Address",
+    "fieldContext": "config.customOptions",
+    "type": "text",
+    "required": true,
+    "defaultValue": "apps.hpetrlab.local",
+    "verifyPattern": "^[A-Za-z0-9.-]+$",
+    "helpBlock": "Host name or IP users open Grafana with: a load balancer name, or any Kubernetes node IP when there is no load balancer. The URL becomes http://<Public Address>:<NodePort>.",
+    "displayOrder": 5
+   },
+   {
+    "fieldName": "nodePort",
+    "fieldLabel": "NodePort",
+    "fieldContext": "config.customOptions",
+    "type": "text",
+    "required": true,
+    "defaultValue": "31300",
+    "verifyPattern": "^(30[0-9]{3}|31[0-9]{3}|32[0-6][0-9]{2}|327[0-5][0-9]|3276[0-7])$",
+    "helpBlock": "30000-32767, free on the cluster. URL: http://apps.hpetrlab.local:<NodePort>",
+    "displayOrder": 6
+   },
+   {
+    "fieldName": "storageClass",
+    "fieldLabel": "Storage Class",
+    "fieldContext": "config.customOptions",
+    "type": "select",
+    "required": true,
+    "optionSource": "list",
+    "optionList": {
+     "id": 19
+    },
+    "dependsOnCode": "cluster",
+    "helpBlock": "Where Grafana keeps its database and dashboards.",
+    "displayOrder": 7
+   },
+   {
+    "fieldName": "storageSize",
+    "fieldLabel": "Storage Size (GB)",
+    "fieldContext": "config.customOptions",
+    "type": "text",
+    "required": true,
+    "defaultValue": "5",
+    "verifyPattern": "^([1-9]|[1-4][0-9]|50)$",
+    "helpBlock": "1-50 GB. Cannot be changed later through the form.",
+    "displayOrder": 8
+   },
+   {
+    "fieldName": "adminPassword",
+    "fieldLabel": "Admin Password",
+    "fieldContext": "config.customOptions",
+    "type": "password",
+    "required": true,
+    "verifyPattern": "^[^'\\\\]{8,64}$",
+    "helpBlock": "8-64 characters, no quote or backslash. Login user is admin.",
+    "displayOrder": 9
+   }
+  ]
+ }
+}
