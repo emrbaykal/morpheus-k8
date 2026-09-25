@@ -9,7 +9,10 @@ import javax.net.ssl.SSLSession
 import java.security.cert.X509Certificate
 
 // =============================================================================
-// grafana_connect_morpheus.groovy  (v1.6.0 - reader user from the form)
+// grafana_connect_morpheus.groovy  (v1.6.1 - column order)
+// v1.6.1: every table keeps the column order defined here (Infinity's backend
+//         parser sorts columns alphabetically, which pushed Name/VM/Host to
+//         the right); CPU / Memory bar labels show only the host name.
 // v1.6.0: runs as the second task of the "Grafana - Connect Morpheus" workflow,
 //         after grafana_setup_reader.groovy (the separate Setup item is gone).
 //         The reader username comes from the form field readerUsername
@@ -274,9 +277,16 @@ def stat = { int id, String title, String path, int x ->
      targets: [q(path, "meta", [["total", "Total", "number"]])],
      options: [reduceOptions: [calcs: ["lastNotNull"], fields: "", values: false], colorMode: "none", graphMode: "none"]]
 }
+// The Infinity backend parser returns columns in alphabetical order; this
+// "organize" step puts them back in the order they are listed here.
+def ordered = { List names, List hide = [] ->
+    def idx = [:]
+    names.eachWithIndex { n, i -> idx[n] = i }
+    [id: "organize", options: [indexByName: idx, excludeByName: hide.collectEntries { [(it): true] }, renameByName: [:]]]
+}
 def table = { int id, String title, String path, String root, List cols, int x, int y, int w, int h ->
     [id: id, type: "table", title: title, datasource: ds, gridPos: [h: h, w: w, x: x, y: y],
-     targets: [q(path, root, cols)]]
+     targets: [q(path, root, cols)], transformations: [ordered(cols.collect { it[1] })]]
 }
 // Performance rows: one per cluster, built from the clusters the caller can see.
 def perfPanels = []
@@ -296,18 +306,22 @@ clusterList.each { c ->
                   binary: [left: "Used memory", operator: "/", right: "Max memory"], replaceFields: false]]
     perfPanels << [id: pid++, type: "row", title: "${c.name} - performance (last sample Morpheus holds)".toString(),
                    collapsed: false, gridPos: [h: 1, w: 24, x: 0, y: py], panels: []]
+    // Bar labels come from the text columns, so only the host name is kept.
+    def barLabel = ordered(["Host"], ["Power", "Sampled at"])
+    def hostOrder = ["Host", "Power", "CPU", "Memory", "Used memory", "Max memory", "Net Tx", "Net Rx",
+                     "IOPS", "Swap used", "Sampled at"]
     perfPanels << [id: pid++, type: "bargauge", title: "CPU %", datasource: ds, gridPos: [h: 8, w: 6, x: 0, y: py + 1],
-                   targets: [q(path, "servers", cols)],
+                   targets: [q(path, "servers", cols)], transformations: [barLabel],
                    fieldConfig: [defaults: [unit: "percent", min: 0, max: 100, decimals: 1], overrides: []],
                    options: [reduceOptions: [values: true, calcs: [], fields: "/^CPU\$/"], orientation: "horizontal",
                              displayMode: "basic", showUnfilled: true]]
     perfPanels << [id: pid++, type: "bargauge", title: "Memory used", datasource: ds, gridPos: [h: 8, w: 6, x: 6, y: py + 1],
-                   targets: [q(path, "servers", cols)], transformations: [memPct],
+                   targets: [q(path, "servers", cols)], transformations: [memPct, barLabel],
                    fieldConfig: [defaults: [unit: "percentunit", min: 0, max: 1, decimals: 1], overrides: []],
                    options: [reduceOptions: [values: true, calcs: [], fields: "/^Memory\$/"], orientation: "horizontal",
                              displayMode: "basic", showUnfilled: true]]
     perfPanels << [id: pid++, type: "table", title: "Hosts / nodes", datasource: ds, gridPos: [h: 8, w: 12, x: 12, y: py + 1],
-                   targets: [q(path, "servers", cols)], transformations: [memPct],
+                   targets: [q(path, "servers", cols)], transformations: [memPct, ordered(hostOrder)],
                    fieldConfig: [defaults: [:], overrides: [
                        [matcher: [id: "byName", options: "CPU"], properties: [[id: "unit", value: "percent"], [id: "decimals", value: 1]]],
                        [matcher: [id: "byName", options: "Used memory"], properties: [[id: "unit", value: "bytes"]]],
@@ -337,7 +351,7 @@ perfPanels << healthStat("System memory", "System memory", "percentunit", 1, 8)
 perfPanels << healthStat("Storage", "Storage", "percent", 100, 12)
 perfPanels << [id: pid++, type: "table", title: "Services", datasource: ds, gridPos: [h: 4, w: 8, x: 16, y: py + 1],
                targets: [q("/api/health", "health", healthCols)],
-               transformations: [[id: "organize", options: [excludeByName: ["CPU": true, "JVM memory": true, "System memory": true, "Storage": true]]]]]
+               transformations: [ordered(["Database", "Elasticsearch", "RabbitMQ"], ["CPU", "JVM memory", "System memory", "Storage"])]]
 perfPanels << table(pid++, "Appliance storage", "/api/health", "health.storage.files",
                     [["path", "Path"], ["name", "Device"], ["percent", "Used %", "number"], ["total", "Size", "number"]],
                     0, py + 5, 12, 6)
@@ -380,6 +394,7 @@ if (!vmSections.isEmpty()) {
         perfPanels << [id: pid++, type: "table", title: "${sec.zone.name} - ${sec.count} VMs".toString(), datasource: ds,
                        gridPos: [h: h, w: 24, x: 0, y: py],
                        targets: [q("/api/servers?max=500&vm=true&zoneId=" + sec.zone.id, "servers", vmCols)],
+                       transformations: [ordered(vmCols.collect { it[1] })],
                        fieldConfig: [defaults: [:], overrides: overrides]]
         py += h
     }
