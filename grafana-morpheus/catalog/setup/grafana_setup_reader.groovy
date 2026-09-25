@@ -10,7 +10,9 @@ import java.security.cert.X509Certificate
 import java.security.SecureRandom
 
 // =============================================================================
-// grafana_setup_reader.groovy  (v1.1.0 - reader user from the form)
+// grafana_setup_reader.groovy  (v1.1.1 - keep existing roles)
+// v1.1.1: adding the role to an existing user keeps the roles it already has
+//         (PUT /api/users replaces the whole role list).
 // v1.1.0: first task of the "Grafana - Connect Morpheus" workflow (the separate
 //         "Grafana - Setup Reader Access" item is gone). Username and an
 //         optional password come from the form. An existing user is not
@@ -165,8 +167,10 @@ if (!user) {
 } else {
     def roleIds = (user.roles ?: []).collect { it.id?.toString() }
     if (!roleIds.contains(role.id.toString())) {
-        must("Assigning '${ROLE_NAME}' to '${READER_USER}'", api("PUT", "/api/users/${user.id}", [user: [roles: [[id: role.id]]]]))
-        done << "role assigned to '${READER_USER}'"
+        // PUT replaces the role list, so send the user's current roles plus this one.
+        def keep = (user.roles ?: []).findAll { it?.id != null }.collect { [id: it.id] }
+        must("Assigning '${ROLE_NAME}' to '${READER_USER}'", api("PUT", "/api/users/${user.id}", [user: [roles: keep + [[id: role.id]]]]))
+        done << "role added to '${READER_USER}' (${keep.size()} existing role(s) kept)"
     }
     if (typedPw) {
         must("Setting the password of '${READER_USER}'", api("PUT", "/api/users/${user.id}", [user: [password: typedPw]]))
