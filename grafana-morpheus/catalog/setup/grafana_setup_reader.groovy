@@ -10,7 +10,9 @@ import java.security.cert.X509Certificate
 import java.security.SecureRandom
 
 // =============================================================================
-// grafana_setup_reader.groovy  (v1.1.1 - keep existing roles)
+// grafana_setup_reader.groovy  (v1.1.2 - storage read)
+// v1.1.2: the role also gets Storage = Read (infrastructure-storage), so the
+//         dashboards can list datastores from /api/data-stores
 // v1.1.1: adding the role to an existing user keeps the roles it already has
 //         (PUT /api/users replaces the whole role list).
 // v1.1.0: first task of the "Grafana - Connect Morpheus" workflow (the separate

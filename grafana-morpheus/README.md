@@ -41,7 +41,7 @@ Turns a Grafana from this catalog into a Morpheus dashboard. One workflow, two G
 
 | File | Morpheus object |
 |---|---|
-| `setup/grafana_setup_reader.groovy` (v1.1.0) | Task 1: create or repair role "Grafana Reader", OAuth client `grafana` (token lifetime from the form) and the reader user. A missing user is created (typed password, or a random one when the field is empty); an existing user is never created again and its password changes only when one is typed. The password is kept in Cypher `secret/<user>-password`. Ends with a login test |
+| `setup/grafana_setup_reader.groovy` (v1.1.2) | Task 1: create or repair role "Grafana Reader", OAuth client `grafana` (token lifetime from the form) and the reader user. A missing user is created (typed password, or a random one when the field is empty); an existing user is never created again and its password changes only when one is typed. The password is kept in Cypher `secret/<user>-password`. Ends with a login test |
 | `connect/grafana_connect_morpheus.groovy` (v1.6.0) | Task 2: renew the reader user's token (password from Cypher `secret/<user>-password`, token written to `secret/<user>-token`), install the Infinity data source plugin, create/update data source "Morpheus" (Bearer token in Grafana's encrypted secureJsonData), create/overwrite dashboard "Morpheus Overview" |
 | `connect/form.json` | Form: Grafana App (option list "Helm Apps"), Grafana Admin Password (stored in Cypher `secret/grafana-admin/<app>`; may be left empty afterwards), Prometheus URL, Morpheus URL, Reader Username (default `grafana-reader`), Reader Password (optional), Token lifetime (days) |
 
