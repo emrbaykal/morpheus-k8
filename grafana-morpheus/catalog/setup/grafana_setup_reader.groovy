@@ -22,7 +22,8 @@ import java.security.SecureRandom
 // Runs on every "Grafana - Connect Morpheus" order, before the connect task.
 // Creates or repairs, idempotently:
 //   1. role "Grafana Reader" - read only: activity, apps, clusters, clouds,
-//      hosts/VMs, appliance health, monitoring, guidance; all groups and clouds
+//      hosts/VMs, appliance health, monitoring, guidance, storage (datastores);
+//      all groups and clouds
 //   2. OAuth client "grafana" - access token validity from the form (days)
 //   3. the reader user with that role:
 //        missing                -> created; password from the form, or a
@@ -48,7 +49,7 @@ import java.security.SecureRandom
 final String ROLE_NAME   = "Grafana Reader"
 final String CLIENT_ID   = "grafana"
 final List READ_PERMS    = ["activity", "apps", "infrastructure-cluster", "admin-zones", "admin-servers",
-                            "admin-health", "monitoring", "guidance"]
+                            "admin-health", "monitoring", "guidance", "infrastructure-storage"]
 
 def opts = [
     { customOptions },

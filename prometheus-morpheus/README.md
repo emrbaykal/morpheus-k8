@@ -3,6 +3,8 @@
 Catalog item "Prometheus" installs `prometheus-chart/` (this repository) on a Kubernetes cluster
 through a Helm blueprint, the same way the "Grafana" item installs Grafana.
 
+Lab objects: Helm blueprint "Prometheus" (7), form "Prometheus" (25), catalog item "Prometheus" (20).
+
 ## What the chart deploys
 
 | Object | Purpose |

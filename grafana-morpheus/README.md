@@ -51,7 +51,7 @@ password, the order stops and asks for one in Reader Password. A typed password 
 order record; leave the field empty to let the task generate one.
 
 Service user (default `grafana-reader`), role "Grafana Reader" - read only: activity, apps, clusters,
-clouds, hosts and VMs, appliance health, monitoring, guidance, all groups and clouds. `provisioning` (instances) has no read level in
+clouds, hosts and VMs, appliance health, monitoring, guidance, storage (datastores), all groups and clouds. `provisioning` (instances) has no read level in
 Morpheus, so instances are shown through hosts and VMs instead. Its token comes from the dedicated OAuth client `grafana` (Administration > Settings > Clients,
 access token validity 31536000 s = 1 year; morph-api would give 30 days). Re-run this item once a
 year. To revoke access at once: disable the reader user or delete the `grafana` client.

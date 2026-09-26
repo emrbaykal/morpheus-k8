@@ -7,6 +7,14 @@
       "type": "datasource",
       "pluginId": "yesoreyeram-infinity-datasource",
       "pluginName": "Infinity"
+    },
+    {
+      "name": "DS_PROMETHEUS_MORPHEUS",
+      "label": "Prometheus (Morpheus json-exporter)",
+      "description": "Prometheus that scrapes this Morpheus through json-exporter",
+      "type": "datasource",
+      "pluginId": "prometheus",
+      "pluginName": "Prometheus"
     }
   ],
   "__requires": [
@@ -21,6 +29,12 @@
       "id": "grafana",
       "name": "Grafana",
       "version": "10.0.0"
+    },
+    {
+      "type": "datasource",
+      "id": "prometheus",
+      "name": "Prometheus",
+      "version": "1.0.0"
     }
   ],
   "uid": "morpheus-overview",
@@ -141,6 +155,35 @@
           ]
         },
         "sort": 1,
+        "options": []
+      },
+      {
+        "name": "pcloud",
+        "label": "Cloud (trends)",
+        "type": "query",
+        "datasource": {
+          "type": "prometheus",
+          "uid": "${DS_PROMETHEUS_MORPHEUS}"
+        },
+        "query": {
+          "qryType": 1,
+          "query": "label_values(morpheus_server_cpu_percent, cloud)",
+          "refId": "PromVariableQueryEditor-VariableQuery"
+        },
+        "definition": "label_values(morpheus_server_cpu_percent, cloud)",
+        "refresh": 2,
+        "multi": true,
+        "includeAll": true,
+        "allValue": ".*",
+        "sort": 1,
+        "current": {
+          "text": [
+            "All"
+          ],
+          "value": [
+            "$__all"
+          ]
+        },
         "options": []
       }
     ]
@@ -1124,12 +1167,365 @@
       "type": "table"
     },
     {
+      "id": 130,
+      "type": "row",
+      "title": "Datastores",
       "collapsed": false,
+      "panels": [],
       "gridPos": {
         "h": 1,
         "w": 24,
         "x": 0,
         "y": 41
+      }
+    },
+    {
+      "id": 131,
+      "type": "bargauge",
+      "title": "Datastore used %",
+      "datasource": {
+        "type": "yesoreyeram-infinity-datasource",
+        "uid": "${DS_MORPHEUS}"
+      },
+      "gridPos": {
+        "h": 10,
+        "w": 10,
+        "x": 0,
+        "y": 42
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "yesoreyeram-infinity-datasource",
+            "uid": "${DS_MORPHEUS}"
+          },
+          "type": "json",
+          "source": "url",
+          "parser": "backend",
+          "format": "table",
+          "url": "/api/data-stores?max=500",
+          "url_options": {
+            "method": "GET",
+            "data": ""
+          },
+          "root_selector": "datastores",
+          "columns": [
+            {
+              "selector": "name",
+              "text": "Datastore",
+              "type": "string"
+            },
+            {
+              "selector": "type",
+              "text": "Type",
+              "type": "string"
+            },
+            {
+              "selector": "online",
+              "text": "Online",
+              "type": "string"
+            },
+            {
+              "selector": "storageSize",
+              "text": "Size",
+              "type": "number"
+            },
+            {
+              "selector": "freeSpace",
+              "text": "Free",
+              "type": "number"
+            }
+          ]
+        }
+      ],
+      "transformations": [
+        {
+          "id": "calculateField",
+          "options": {
+            "mode": "binary",
+            "alias": "Used",
+            "binary": {
+              "left": "Size",
+              "operator": "-",
+              "right": "Free"
+            },
+            "replaceFields": false
+          }
+        },
+        {
+          "id": "calculateField",
+          "options": {
+            "mode": "binary",
+            "alias": "Used %",
+            "binary": {
+              "left": "Used",
+              "operator": "/",
+              "right": "Size"
+            },
+            "replaceFields": false
+          }
+        },
+        {
+          "id": "organize",
+          "options": {
+            "excludeByName": {
+              "Type": true,
+              "Online": true,
+              "Size": true,
+              "Free": true,
+              "Used": true
+            },
+            "indexByName": {},
+            "renameByName": {}
+          }
+        },
+        {
+          "id": "sortBy",
+          "options": {
+            "sort": [
+              {
+                "field": "Used %",
+                "desc": true
+              }
+            ]
+          }
+        },
+        {
+          "id": "rowsToFields",
+          "options": {
+            "mappings": [
+              {
+                "fieldName": "Datastore",
+                "handlerKey": "field.name"
+              },
+              {
+                "fieldName": "Used %",
+                "handlerKey": "field.value"
+              }
+            ]
+          }
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percentunit",
+          "min": 0,
+          "max": 1,
+          "decimals": 1,
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "orange",
+                "value": 0.75
+              },
+              {
+                "color": "red",
+                "value": 0.9
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "values": false,
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": ""
+        },
+        "orientation": "horizontal",
+        "displayMode": "basic",
+        "showUnfilled": true
+      }
+    },
+    {
+      "id": 132,
+      "type": "table",
+      "title": "Datastores",
+      "datasource": {
+        "type": "yesoreyeram-infinity-datasource",
+        "uid": "${DS_MORPHEUS}"
+      },
+      "gridPos": {
+        "h": 10,
+        "w": 14,
+        "x": 10,
+        "y": 42
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "yesoreyeram-infinity-datasource",
+            "uid": "${DS_MORPHEUS}"
+          },
+          "type": "json",
+          "source": "url",
+          "parser": "backend",
+          "format": "table",
+          "url": "/api/data-stores?max=500",
+          "url_options": {
+            "method": "GET",
+            "data": ""
+          },
+          "root_selector": "datastores",
+          "columns": [
+            {
+              "selector": "name",
+              "text": "Datastore",
+              "type": "string"
+            },
+            {
+              "selector": "type",
+              "text": "Type",
+              "type": "string"
+            },
+            {
+              "selector": "online",
+              "text": "Online",
+              "type": "string"
+            },
+            {
+              "selector": "storageSize",
+              "text": "Size",
+              "type": "number"
+            },
+            {
+              "selector": "freeSpace",
+              "text": "Free",
+              "type": "number"
+            }
+          ]
+        }
+      ],
+      "transformations": [
+        {
+          "id": "calculateField",
+          "options": {
+            "mode": "binary",
+            "alias": "Used",
+            "binary": {
+              "left": "Size",
+              "operator": "-",
+              "right": "Free"
+            },
+            "replaceFields": false
+          }
+        },
+        {
+          "id": "calculateField",
+          "options": {
+            "mode": "binary",
+            "alias": "Used %",
+            "binary": {
+              "left": "Used",
+              "operator": "/",
+              "right": "Size"
+            },
+            "replaceFields": false
+          }
+        },
+        {
+          "id": "organize",
+          "options": {
+            "indexByName": {
+              "Datastore": 0,
+              "Type": 1,
+              "Online": 2,
+              "Used %": 3,
+              "Used": 4,
+              "Free": 5,
+              "Size": 6
+            },
+            "excludeByName": {},
+            "renameByName": {}
+          }
+        },
+        {
+          "id": "sortBy",
+          "options": {
+            "sort": [
+              {
+                "field": "Used %",
+                "desc": true
+              }
+            ]
+          }
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {},
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Size"
+            },
+            "properties": [
+              {
+                "id": "unit",
+                "value": "bytes"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Free"
+            },
+            "properties": [
+              {
+                "id": "unit",
+                "value": "bytes"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Used"
+            },
+            "properties": [
+              {
+                "id": "unit",
+                "value": "bytes"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Used %"
+            },
+            "properties": [
+              {
+                "id": "unit",
+                "value": "percentunit"
+              },
+              {
+                "id": "decimals",
+                "value": 1
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "collapsed": false,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 52
       },
       "id": 108,
       "panels": [],
@@ -1154,7 +1550,7 @@
         "h": 4,
         "w": 4,
         "x": 0,
-        "y": 42
+        "y": 53
       },
       "id": 109,
       "options": {
@@ -1246,7 +1642,7 @@
         "h": 4,
         "w": 4,
         "x": 4,
-        "y": 42
+        "y": 53
       },
       "id": 110,
       "options": {
@@ -1338,7 +1734,7 @@
         "h": 4,
         "w": 4,
         "x": 8,
-        "y": 42
+        "y": 53
       },
       "id": 111,
       "options": {
@@ -1430,7 +1826,7 @@
         "h": 4,
         "w": 4,
         "x": 12,
-        "y": 42
+        "y": 53
       },
       "id": 112,
       "options": {
@@ -1513,7 +1909,7 @@
         "h": 4,
         "w": 8,
         "x": 16,
-        "y": 42
+        "y": 53
       },
       "id": 113,
       "targets": [
@@ -1603,7 +1999,7 @@
         "h": 6,
         "w": 12,
         "x": 0,
-        "y": 46
+        "y": 57
       },
       "id": 114,
       "targets": [
@@ -1674,7 +2070,7 @@
         "h": 6,
         "w": 12,
         "x": 12,
-        "y": 46
+        "y": 57
       },
       "id": 115,
       "targets": [
@@ -1742,7 +2138,7 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 52
+        "y": 63
       },
       "id": 116,
       "panels": [],
@@ -1758,7 +2154,7 @@
         "h": 8,
         "w": 14,
         "x": 0,
-        "y": 53
+        "y": 64
       },
       "id": 117,
       "targets": [
@@ -1835,7 +2231,7 @@
         "h": 8,
         "w": 10,
         "x": 14,
-        "y": 53
+        "y": 64
       },
       "id": 118,
       "targets": [
@@ -1900,20 +2296,20 @@
     {
       "id": 119,
       "type": "row",
-      "title": "Virtual machines (last sample Morpheus holds)",
+      "title": "Virtual machines",
       "collapsed": false,
       "panels": [],
       "gridPos": {
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 61
+        "y": 72
       }
     },
     {
       "datasource": {
-        "type": "yesoreyeram-infinity-datasource",
-        "uid": "${DS_MORPHEUS}"
+        "type": "prometheus",
+        "uid": "${DS_PROMETHEUS_MORPHEUS}"
       },
       "fieldConfig": {
         "defaults": {},
@@ -1981,6 +2377,32 @@
                 "value": 1
               }
             ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Power"
+            },
+            "properties": [
+              {
+                "id": "mappings",
+                "value": [
+                  {
+                    "type": "value",
+                    "options": {
+                      "0": {
+                        "text": "off",
+                        "index": 0
+                      },
+                      "1": {
+                        "text": "on",
+                        "index": 1
+                      }
+                    }
+                  }
+                ]
+              }
+            ]
           }
         ]
       },
@@ -1988,111 +2410,417 @@
         "h": 10,
         "w": 24,
         "x": 0,
-        "y": 62
+        "y": 73
       },
       "id": 120,
       "targets": [
         {
-          "columns": [
-            {
-              "selector": "name",
-              "text": "VM",
-              "type": "string"
-            },
-            {
-              "selector": "powerState",
-              "text": "Power",
-              "type": "string"
-            },
-            {
-              "selector": "stats.cpuUsage",
-              "text": "CPU",
-              "type": "number"
-            },
-            {
-              "selector": "stats.usedMemory",
-              "text": "Used memory",
-              "type": "number"
-            },
-            {
-              "selector": "stats.maxMemory",
-              "text": "Max memory",
-              "type": "number"
-            },
-            {
-              "selector": "stats.usedStorage",
-              "text": "Used disk",
-              "type": "number"
-            },
-            {
-              "selector": "stats.maxStorage",
-              "text": "Max disk",
-              "type": "number"
-            },
-            {
-              "selector": "stats.netTxUsage",
-              "text": "Net Tx",
-              "type": "number"
-            },
-            {
-              "selector": "stats.netRxUsage",
-              "text": "Net Rx",
-              "type": "number"
-            },
-            {
-              "selector": "stats.totalIOPS",
-              "text": "IOPS",
-              "type": "number"
-            },
-            {
-              "selector": "stats.ts",
-              "text": "Sampled at",
-              "type": "string"
-            }
-          ],
           "datasource": {
-            "type": "yesoreyeram-infinity-datasource",
-            "uid": "${DS_MORPHEUS}"
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS_MORPHEUS}"
           },
-          "format": "table",
-          "parser": "backend",
           "refId": "A",
-          "root_selector": "servers",
-          "source": "url",
-          "type": "json",
-          "url": "/api/servers?max=500&vm=true&zoneId=${cloud}",
-          "url_options": {
-            "data": "",
-            "method": "GET"
-          }
+          "expr": "(max by (server, server_id) (last_over_time(morpheus_server_power_on_state{cloud=\"${cloud:text}\", server_type!~\".*Hypervisor\"}[5m]))) or (0 * max by (server, server_id) (last_over_time(morpheus_server_memory_max_bytes{cloud=\"${cloud:text}\", server_type!~\".*Hypervisor\"}[5m])))",
+          "editorMode": "code",
+          "instant": true,
+          "range": false,
+          "format": "table"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS_MORPHEUS}"
+          },
+          "refId": "B",
+          "expr": "max by (server, server_id) (last_over_time(morpheus_server_cpu_percent{cloud=\"${cloud:text}\", server_type!~\".*Hypervisor\"}[5m]))",
+          "editorMode": "code",
+          "instant": true,
+          "range": false,
+          "format": "table"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS_MORPHEUS}"
+          },
+          "refId": "C",
+          "expr": "max by (server, server_id) (last_over_time(morpheus_server_memory_used_bytes{cloud=\"${cloud:text}\", server_type!~\".*Hypervisor\"}[5m]))",
+          "editorMode": "code",
+          "instant": true,
+          "range": false,
+          "format": "table"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS_MORPHEUS}"
+          },
+          "refId": "D",
+          "expr": "max by (server, server_id) (last_over_time(morpheus_server_memory_max_bytes{cloud=\"${cloud:text}\", server_type!~\".*Hypervisor\"}[5m]))",
+          "editorMode": "code",
+          "instant": true,
+          "range": false,
+          "format": "table"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS_MORPHEUS}"
+          },
+          "refId": "E",
+          "expr": "max by (server, server_id) (last_over_time(morpheus_server_storage_used_bytes{cloud=\"${cloud:text}\", server_type!~\".*Hypervisor\"}[5m]))",
+          "editorMode": "code",
+          "instant": true,
+          "range": false,
+          "format": "table"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS_MORPHEUS}"
+          },
+          "refId": "F",
+          "expr": "max by (server, server_id) (last_over_time(morpheus_server_storage_max_bytes{cloud=\"${cloud:text}\", server_type!~\".*Hypervisor\"}[5m]))",
+          "editorMode": "code",
+          "instant": true,
+          "range": false,
+          "format": "table"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS_MORPHEUS}"
+          },
+          "refId": "G",
+          "expr": "max by (server, server_id) (last_over_time(morpheus_server_net_tx_bytes{cloud=\"${cloud:text}\", server_type!~\".*Hypervisor\"}[5m]))",
+          "editorMode": "code",
+          "instant": true,
+          "range": false,
+          "format": "table"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS_MORPHEUS}"
+          },
+          "refId": "H",
+          "expr": "max by (server, server_id) (last_over_time(morpheus_server_net_rx_bytes{cloud=\"${cloud:text}\", server_type!~\".*Hypervisor\"}[5m]))",
+          "editorMode": "code",
+          "instant": true,
+          "range": false,
+          "format": "table"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS_MORPHEUS}"
+          },
+          "refId": "I",
+          "expr": "max by (server, server_id) (last_over_time(morpheus_server_iops{cloud=\"${cloud:text}\", server_type!~\".*Hypervisor\"}[5m]))",
+          "editorMode": "code",
+          "instant": true,
+          "range": false,
+          "format": "table"
         }
       ],
       "title": "${cloud:text}",
       "transformations": [
         {
+          "id": "merge",
+          "options": {}
+        },
+        {
           "id": "organize",
           "options": {
-            "excludeByName": {},
-            "indexByName": {
-              "CPU": 2,
-              "IOPS": 9,
-              "Max disk": 6,
-              "Max memory": 4,
-              "Net Rx": 8,
-              "Net Tx": 7,
-              "Power": 1,
-              "Sampled at": 10,
-              "Used disk": 5,
-              "Used memory": 3,
-              "VM": 0
+            "excludeByName": {
+              "Time": true,
+              "server_id": true
             },
-            "renameByName": {}
+            "renameByName": {
+              "Value #A": "Power",
+              "Value #B": "CPU",
+              "Value #C": "Used memory",
+              "Value #D": "Max memory",
+              "Value #E": "Used disk",
+              "Value #F": "Max disk",
+              "Value #G": "Net Tx",
+              "Value #H": "Net Rx",
+              "Value #I": "IOPS",
+              "server": "VM"
+            },
+            "indexByName": {
+              "VM": 0,
+              "Power": 1,
+              "CPU": 2,
+              "Used memory": 3,
+              "Max memory": 4,
+              "Used disk": 5,
+              "Max disk": 6,
+              "Net Tx": 7,
+              "Net Rx": 8,
+              "IOPS": 9
+            }
+          }
+        },
+        {
+          "id": "sortBy",
+          "options": {
+            "sort": [
+              {
+                "field": "VM",
+                "desc": false
+              }
+            ]
           }
         }
       ],
       "type": "table",
       "repeat": "cloud",
-      "repeatDirection": "v"
+      "repeatDirection": "v",
+      "description": "VMs of this cloud from Prometheus (json-exporter reading /api/servers). Each value is the last agent sample within 5 minutes, so it does not drop out when the hypervisor poll overwrites the latest sample in Morpheus. Power is 'off' for a VM that reports no power state but still has a memory size."
+    },
+    {
+      "id": 140,
+      "type": "row",
+      "title": "VM trends (Prometheus)",
+      "collapsed": false,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 83
+      },
+      "panels": []
+    },
+    {
+      "id": 141,
+      "type": "timeseries",
+      "title": "CPU % - top 10",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${DS_PROMETHEUS_MORPHEUS}"
+      },
+      "gridPos": {
+        "h": 9,
+        "w": 12,
+        "x": 0,
+        "y": 84
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS_MORPHEUS}"
+          },
+          "refId": "A",
+          "expr": "topk(10, last_over_time(morpheus_server_cpu_percent{cloud=~\"${pcloud:regex}\", server_type!~\".*Hypervisor\"}[5m]))",
+          "editorMode": "code",
+          "instant": false,
+          "range": true,
+          "format": "time_series",
+          "legendFormat": "{{server}}"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percent",
+          "custom": {
+            "lineWidth": 1,
+            "fillOpacity": 0,
+            "showPoints": "never",
+            "spanNulls": true
+          },
+          "min": 0,
+          "max": 100
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "table",
+          "placement": "right",
+          "calcs": [
+            "lastNotNull",
+            "max"
+          ]
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      }
+    },
+    {
+      "id": 142,
+      "type": "timeseries",
+      "title": "Memory used % - top 10",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${DS_PROMETHEUS_MORPHEUS}"
+      },
+      "gridPos": {
+        "h": 9,
+        "w": 12,
+        "x": 12,
+        "y": 84
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS_MORPHEUS}"
+          },
+          "refId": "A",
+          "expr": "topk(10, 100 * last_over_time(morpheus_server_memory_used_bytes{cloud=~\"${pcloud:regex}\", server_type!~\".*Hypervisor\"}[5m]) / last_over_time(morpheus_server_memory_max_bytes{cloud=~\"${pcloud:regex}\", server_type!~\".*Hypervisor\"}[5m]))",
+          "editorMode": "code",
+          "instant": false,
+          "range": true,
+          "format": "time_series",
+          "legendFormat": "{{server}}"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percent",
+          "custom": {
+            "lineWidth": 1,
+            "fillOpacity": 0,
+            "showPoints": "never",
+            "spanNulls": true
+          },
+          "min": 0,
+          "max": 100
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "table",
+          "placement": "right",
+          "calcs": [
+            "lastNotNull",
+            "max"
+          ]
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      }
+    },
+    {
+      "id": 143,
+      "type": "timeseries",
+      "title": "Disk used % - top 10",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${DS_PROMETHEUS_MORPHEUS}"
+      },
+      "gridPos": {
+        "h": 9,
+        "w": 12,
+        "x": 0,
+        "y": 93
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS_MORPHEUS}"
+          },
+          "refId": "A",
+          "expr": "topk(10, (100 * last_over_time(morpheus_server_storage_used_bytes{cloud=~\"${pcloud:regex}\", server_type!~\".*Hypervisor\"}[5m]) / last_over_time(morpheus_server_storage_max_bytes{cloud=~\"${pcloud:regex}\", server_type!~\".*Hypervisor\"}[5m])) <= 100)",
+          "editorMode": "code",
+          "instant": false,
+          "range": true,
+          "format": "time_series",
+          "legendFormat": "{{server}}"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percent",
+          "custom": {
+            "lineWidth": 1,
+            "fillOpacity": 0,
+            "showPoints": "never",
+            "spanNulls": true
+          },
+          "min": 0,
+          "max": 100
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "table",
+          "placement": "right",
+          "calcs": [
+            "lastNotNull",
+            "max"
+          ]
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      }
+    },
+    {
+      "id": 144,
+      "type": "timeseries",
+      "title": "IOPS - top 10",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${DS_PROMETHEUS_MORPHEUS}"
+      },
+      "gridPos": {
+        "h": 9,
+        "w": 12,
+        "x": 12,
+        "y": 93
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS_MORPHEUS}"
+          },
+          "refId": "A",
+          "expr": "topk(10, last_over_time(morpheus_server_iops{cloud=~\"${pcloud:regex}\", server_type!~\".*Hypervisor\"}[5m]))",
+          "editorMode": "code",
+          "instant": false,
+          "range": true,
+          "format": "time_series",
+          "legendFormat": "{{server}}"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "none",
+          "custom": {
+            "lineWidth": 1,
+            "fillOpacity": 0,
+            "showPoints": "never",
+            "spanNulls": true
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "table",
+          "placement": "right",
+          "calcs": [
+            "lastNotNull",
+            "max"
+          ]
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      }
     }
   ]
 }
