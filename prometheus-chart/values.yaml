@@ -1,0 +1,38 @@
+image:
+  repository: quay.io/prometheus/prometheus
+  tag: v3.5.0
+
+service:
+  type: NodePort
+  nodePort: 31390
+
+# Days of data Prometheus keeps.
+retentionDays: 30
+
+persistence:
+  enabled: true
+  storageClassName: ""
+  size: 10Gi
+
+resources:
+  requests: {cpu: 50m, memory: 256Mi}
+  limits: {memory: 1Gi}
+
+scrapeInterval: 30s
+
+# Optional: read Morpheus (or a VM Essentials manager) through its REST API and keep
+# per-server CPU, memory, storage, network and IOPS as time series. Only the samples
+# written by the Morpheus agent are exported, so a hypervisor-only sample leaves a gap
+# instead of a zero; use last_over_time() in Grafana to bridge it.
+morpheusScrape:
+  enabled: false
+  # Base URL of the Morpheus appliance, e.g. https://morpheus.example.com
+  url: ""
+  # API token of a read-only Morpheus user (Compute = Read is enough for /api/servers).
+  token: ""
+  insecureSkipVerify: true
+  # Label that tells several Morpheus sources apart in Prometheus.
+  name: morpheus
+  image:
+    repository: quay.io/prometheuscommunity/json-exporter
+    tag: v0.7.0

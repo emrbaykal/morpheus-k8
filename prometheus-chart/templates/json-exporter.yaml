@@ -1,0 +1,189 @@
+{{- if .Values.morpheusScrape.enabled }}
+{{- $name := printf "%s-json-exporter" (include "prom.name" .) }}
+apiVersion: v1
+kind: Secret
+metadata:
+  name: {{ $name }}
+  labels:
+    {{- include "prom.labels" . | nindent 4 }}
+type: Opaque
+stringData:
+  token: {{ .Values.morpheusScrape.token | quote }}
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ $name }}
+  labels:
+    {{- include "prom.labels" . | nindent 4 }}
+data:
+  config.yml: |
+    modules:
+      morpheus:
+        http_client_config:
+          authorization:
+            type: Bearer
+            credentials_file: /etc/morpheus/token
+          tls_config:
+            insecure_skip_verify: {{ .Values.morpheusScrape.insecureSkipVerify }}
+        metrics:
+          # One block per value, each filtered on that field existing, so a sample
+          # without it (hypervisor-only) is skipped instead of logged as an error.
+          - name: morpheus_server
+            type: object
+            help: CPU usage in percent from the latest agent sample
+            path: '{.servers[?(@.stats.cpuUsage)]}'
+            labels:
+              server: '{.name}'
+              server_id: '{.id}'
+              cloud: '{.zone.name}'
+              server_type: '{.computeServerType.name}'
+            values:
+              cpu_percent: '{.stats.cpuUsage}'
+          - name: morpheus_server
+            type: object
+            help: Used memory from the latest agent sample
+            path: '{.servers[?(@.stats.usedMemory)]}'
+            labels:
+              server: '{.name}'
+              server_id: '{.id}'
+              cloud: '{.zone.name}'
+              server_type: '{.computeServerType.name}'
+            values:
+              memory_used_bytes: '{.stats.usedMemory}'
+          - name: morpheus_server
+            type: object
+            help: Memory size from the latest agent sample
+            path: '{.servers[?(@.stats.maxMemory)]}'
+            labels:
+              server: '{.name}'
+              server_id: '{.id}'
+              cloud: '{.zone.name}'
+              server_type: '{.computeServerType.name}'
+            values:
+              memory_max_bytes: '{.stats.maxMemory}'
+          - name: morpheus_server
+            type: object
+            help: Used disk from the latest agent sample
+            path: '{.servers[?(@.stats.usedStorage)]}'
+            labels:
+              server: '{.name}'
+              server_id: '{.id}'
+              cloud: '{.zone.name}'
+              server_type: '{.computeServerType.name}'
+            values:
+              storage_used_bytes: '{.stats.usedStorage}'
+          - name: morpheus_server
+            type: object
+            help: Disk size from the latest agent sample
+            path: '{.servers[?(@.stats.maxStorage)]}'
+            labels:
+              server: '{.name}'
+              server_id: '{.id}'
+              cloud: '{.zone.name}'
+              server_type: '{.computeServerType.name}'
+            values:
+              storage_max_bytes: '{.stats.maxStorage}'
+          - name: morpheus_server
+            type: object
+            help: Network transmit from the latest agent sample
+            path: '{.servers[?(@.stats.netTxUsage)]}'
+            labels:
+              server: '{.name}'
+              server_id: '{.id}'
+              cloud: '{.zone.name}'
+              server_type: '{.computeServerType.name}'
+            values:
+              net_tx_bytes: '{.stats.netTxUsage}'
+          - name: morpheus_server
+            type: object
+            help: Network receive from the latest agent sample
+            path: '{.servers[?(@.stats.netRxUsage)]}'
+            labels:
+              server: '{.name}'
+              server_id: '{.id}'
+              cloud: '{.zone.name}'
+              server_type: '{.computeServerType.name}'
+            values:
+              net_rx_bytes: '{.stats.netRxUsage}'
+          - name: morpheus_server
+            type: object
+            help: Disk IOPS from the latest agent sample
+            path: '{.servers[?(@.stats.totalIOPS)]}'
+            labels:
+              server: '{.name}'
+              server_id: '{.id}'
+              cloud: '{.zone.name}'
+              server_type: '{.computeServerType.name}'
+            values:
+              iops: '{.stats.totalIOPS}'
+          - name: morpheus_server_power_on
+            type: object
+            help: 1 while the server power state is on
+            path: '{.servers[?(@.powerState=="on")]}'
+            labels:
+              server: '{.name}'
+              server_id: '{.id}'
+              cloud: '{.zone.name}'
+            values:
+              state: '1'
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ $name }}
+  labels:
+    {{- include "prom.labels" . | nindent 4 }}
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: json-exporter
+      app.kubernetes.io/instance: {{ .Release.Name }}
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: json-exporter
+        app.kubernetes.io/instance: {{ .Release.Name }}
+      annotations:
+        checksum/config: {{ .Values.morpheusScrape | toJson | sha256sum }}
+    spec:
+      containers:
+        - name: json-exporter
+          image: "{{ .Values.morpheusScrape.image.repository }}:{{ .Values.morpheusScrape.image.tag }}"
+          args: ["--config.file=/config/config.yml"]
+          ports:
+            - name: http
+              containerPort: 7979
+          resources:
+            requests: {cpu: 20m, memory: 32Mi}
+            limits: {memory: 128Mi}
+          volumeMounts:
+            - name: config
+              mountPath: /config
+            - name: token
+              mountPath: /etc/morpheus
+              readOnly: true
+      volumes:
+        - name: config
+          configMap:
+            name: {{ $name }}
+        - name: token
+          secret:
+            secretName: {{ $name }}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ $name }}
+  labels:
+    {{- include "prom.labels" . | nindent 4 }}
+spec:
+  selector:
+    app.kubernetes.io/name: json-exporter
+    app.kubernetes.io/instance: {{ .Release.Name }}
+  ports:
+    - name: http
+      port: 7979
+      targetPort: http
+{{- end }}
