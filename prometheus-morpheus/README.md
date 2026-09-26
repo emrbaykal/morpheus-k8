@@ -22,6 +22,13 @@ last is returned, so a single read shows gaps. The json-exporter only emits a va
 present, so Prometheus stores the agent samples and simply has no point for a hypervisor-only read.
 In Grafana use `last_over_time(<metric>[5m])` to show the latest agent value.
 
+The agent sample stays visible in `/api/servers` only from a few seconds to about 20 s before the
+hypervisor poll overwrites it, and both run on a 60 s cycle. A 30 s scrape can therefore miss the
+same server every time (seen in the lab: no points at all for one VM in an hour), so the `morpheus`
+job runs every 15 s (`morpheusScrape.interval`, timeout `morpheusScrape.timeout` 12 s). Servers
+whose sample lives only a few seconds are still caught now and then; `last_over_time` carries the
+value between catches.
+
 Metrics (labels `server`, `server_id`, `cloud`, `server_type`, plus `morpheus=<Source Label>`):
 `morpheus_server_cpu_percent`, `_memory_used_bytes`, `_memory_max_bytes`, `_storage_used_bytes`,
 `_storage_max_bytes`, `_net_tx_bytes`, `_net_rx_bytes`, `_iops`, and `morpheus_server_power_on_state`.

@@ -33,6 +33,12 @@ morpheusScrape:
   insecureSkipVerify: true
   # Label that tells several Morpheus sources apart in Prometheus.
   name: morpheus
+  # /api/servers keeps one latest sample per server; the agent sample is overwritten by the
+  # hypervisor poll within seconds to about 20 s. With both on a 60 s cycle a 30 s scrape can
+  # miss a server every time, so this job is scraped more often than the rest.
+  interval: 15s
+  # Must be shorter than interval. One read of /api/servers?max=2000 took about 4 s in the lab.
+  timeout: 12s
   image:
     repository: quay.io/prometheuscommunity/json-exporter
     tag: v0.7.0
