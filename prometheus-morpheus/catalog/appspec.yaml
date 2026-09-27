@@ -6,6 +6,7 @@
 #   morpheusScrape  optional json-exporter that reads /api/servers of a Morpheus / VM Essentials
 #                   manager with a read-only token (the token is also stored in the order)
 # Namespace: defaultPool.id - the namespace option list returns "pool-<id>", the App Spec needs the id.
+# Empty text fields can reach the App Spec as the string 'null', so host fields are checked for it.
 # BLUEPRINT_ID is filled in when the blueprint is created.
 id: BLUEPRINT_ID
 templateId: BLUEPRINT_ID
@@ -38,8 +39,8 @@ templateParameter:
       storageClassName: <%= customOptions.storageClass %>
       size: <%= customOptions.storageSize %>Gi
     hostScrape:
-      hosts: '<%= customOptions.hostAddresses ?: '' %>'
-      source: '<%= customOptions.hostSource ?: '' %>'
+      hosts: '<%= customOptions.hostAddresses && customOptions.hostAddresses.toString() != 'null' ? customOptions.hostAddresses : '' %>'
+      source: '<%= customOptions.hostSource && customOptions.hostSource.toString() != 'null' ? customOptions.hostSource : '' %>'
     morpheusScrape:
       enabled: <%= customOptions.morpheusScrape?.toString() in ['on', 'true'] %>
       url: '<%= customOptions.morpheusUrl ?: '' %>'

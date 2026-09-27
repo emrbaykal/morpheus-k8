@@ -37,12 +37,22 @@
     "helpBlock": "Prometheus as Grafana reaches it (kube-prometheus default shown). Empty = no Kubernetes Pods dashboard; a URL that does not answer is skipped."
    },
    {
+    "fieldName": "hostPrometheusUrl",
+    "fieldLabel": "HVM Hosts Prometheus URL",
+    "fieldContext": "config.customOptions",
+    "type": "text",
+    "required": false,
+    "placeHolder": "http://prometheus.example.svc:9090",
+    "displayOrder": 3,
+    "helpBlock": "Prometheus that scrapes node_exporter and prometheus-libvirt-exporter on the HVM hosts, as Grafana reaches it. Empty = no HVM dashboards; a URL that does not answer is skipped."
+   },
+   {
     "fieldName": "morpheusUrl",
     "fieldLabel": "Morpheus URL (from Grafana)",
     "fieldContext": "config.customOptions",
     "type": "text",
     "required": false,
-    "displayOrder": 3,
+    "displayOrder": 4,
     "helpBlock": "Morpheus address Grafana should call, e.g. the load balancer or the single node name. Empty = this appliance's URL."
    },
    {
@@ -53,7 +63,7 @@
     "required": true,
     "defaultValue": "grafana-reader",
     "verifyPattern": "^[A-Za-z0-9][A-Za-z0-9._-]{2,49}$",
-    "displayOrder": 4,
+    "displayOrder": 5,
     "helpBlock": "Read-only Morpheus API user Grafana uses. Created if missing; an existing user is reused, never duplicated."
    },
    {
@@ -62,7 +72,7 @@
     "fieldContext": "config.customOptions",
     "type": "password",
     "required": false,
-    "displayOrder": 5,
+    "displayOrder": 6,
     "helpBlock": "Optional. Empty: a random password for a new user, no change for an existing one. Typed: set on the user and stored in Cypher."
    },
    {
@@ -73,8 +83,18 @@
     "required": true,
     "defaultValue": "365",
     "verifyPattern": "^[0-9]{1,4}$",
-    "displayOrder": 6,
+    "displayOrder": 7,
     "helpBlock": "How long the reader API token stays valid. Order this item again before it expires."
+   },
+   {
+    "fieldName": "dashboardSource",
+    "fieldLabel": "Dashboard Source URL",
+    "fieldContext": "config.customOptions",
+    "type": "text",
+    "required": false,
+    "placeHolder": "https://raw.githubusercontent.com/emrbaykal/morpheus-k8/main/grafana-morpheus/dashboards",
+    "displayOrder": 8,
+    "helpBlock": "Folder with the dashboard JSON files, reachable from the Morpheus appliance. Empty = the morpheus-k8 repository on GitHub."
    }
   ]
  }

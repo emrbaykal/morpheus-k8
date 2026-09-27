@@ -42,8 +42,8 @@ Turns a Grafana from this catalog into a Morpheus dashboard. One workflow, two G
 | File | Morpheus object |
 |---|---|
 | `setup/grafana_setup_reader.groovy` (v1.1.2) | Task 1: create or repair role "Grafana Reader", OAuth client `grafana` (token lifetime from the form) and the reader user. A missing user is created (typed password, or a random one when the field is empty); an existing user is never created again and its password changes only when one is typed. The password is kept in Cypher `secret/<user>-password`. Ends with a login test |
-| `connect/grafana_connect_morpheus.groovy` (v1.6.0) | Task 2: renew the reader user's token (password from Cypher `secret/<user>-password`, token written to `secret/<user>-token`), install the Infinity data source plugin, create/update data source "Morpheus" (Bearer token in Grafana's encrypted secureJsonData), create/overwrite dashboard "Morpheus Overview" |
-| `connect/form.json` | Form: Grafana App (option list "Helm Apps"), Grafana Admin Password (stored in Cypher `secret/grafana-admin/<app>`; may be left empty afterwards), Prometheus URL, Morpheus URL, Reader Username (default `grafana-reader`), Reader Password (optional), Token lifetime (days) |
+| `connect/grafana_connect_morpheus.groovy` (v1.8.0) | Task 2: renew the reader user's token (password from Cypher `secret/<user>-password`, token written to `secret/<user>-token`), install the Infinity data source plugin, create/update data source "Morpheus" (Bearer token in Grafana's encrypted secureJsonData), create/update the Prometheus data sources that answer, then import the published dashboard JSON files from `dashboards/` (Dashboard Source URL) |
+| `connect/form.json` | Form: Grafana App (option list "Helm Apps"), Grafana Admin Password (stored in Cypher `secret/grafana-admin/<app>`; may be left empty afterwards), Prometheus URL (Kubernetes cluster), HVM Hosts Prometheus URL, Morpheus URL, Reader Username (default `grafana-reader`), Reader Password (optional), Token lifetime (days), Dashboard Source URL |
 
 The setup task needs Roles, Users, Clients and Cypher rights, so this item is ordered by a
 master-tenant System Admin. If the reader user exists but neither the form nor Cypher has its
@@ -68,6 +68,23 @@ v1.4.0 adds per-cloud "Virtual machines" tables and, when the in-cluster kube-pr
 `http://prometheus-k8s.monitoring.svc:9090`, data source "Prometheus HKS" plus a second dashboard
 "Kubernetes Pods" (node CPU/memory, pod CPU, memory, network, PVC usage over time; namespace
 filter). Prometheus keeps 1 day of data on this cluster.
+
+## v1.8.0 - dashboards from the published files
+
+The connect task no longer builds dashboards in Groovy. It downloads the JSON files in `dashboards/`
+from the Dashboard Source URL (default: this repository on GitHub, raw files) and imports them with
+Grafana's import API, filling each file's data source input:
+
+| Data source (created by the task) | Form field | Dashboards |
+|---|---|---|
+| Morpheus (Infinity) | Morpheus URL (empty = appliance URL) | Morpheus Overview |
+| Prometheus | Prometheus URL | Kubernetes Pods |
+| Prometheus HVM Hosts | HVM Hosts Prometheus URL | HVM Hosts and VMs, HVM Bottlenecks, HVM Capacity |
+
+A Prometheus URL that does not answer is skipped and its data source removed. The Morpheus
+appliance must reach the Dashboard Source URL; if it has no internet access, put the files on an
+internal web server and enter that folder. The task connects the appliance it runs on; a separate
+VM Essentials manager is connected by hand (data source + `morpheus-overview-vme.json`).
 
 ## v1.5.0 - environment-neutral
 
@@ -106,12 +123,30 @@ workflow 24 (task 53 setup, then task 52 connect). The separate Setup Reader Acc
 
 ## Importable dashboards (no catalog)
 
-`dashboards/` holds the two dashboards for sites that set Grafana up by hand:
+`dashboards/` holds the dashboards for sites that set Grafana up by hand. None of them contains an
+environment-specific value: hosts, VMs, clouds and clusters come from variables, and the data source is
+chosen on import.
 
 | File | Import input | Needs |
 |---|---|---|
-| `morpheus-overview.json` | Infinity data source (its URL = the Morpheus base URL, Bearer token of the read-only user) | Cluster and Cloud variables fill from `/api/clusters` and `/api/zones`; one performance row per selected cluster, one VM table per selected cloud |
-| `kubernetes-pods.json` | Prometheus data source | node-exporter, kube-state-metrics and kubelet metrics (kube-prometheus) |
+| `morpheus-overview.json` | Infinity data source (URL = Morpheus base URL, Bearer token of the read-only user) | Inventory, clusters, datastores, appliance health, monitoring, VM inventory per cloud (`/api/servers`) |
+| `morpheus-overview-vme.json` | same, for a VM Essentials manager | as above without Apps and Monitoring (not licensed on VME) |
+| `hvm-hosts-vms.json` | Prometheus that scrapes the HVM hosts | Host table and graphs, VM table (state, vCPU, CPU %, vCPU wait %, memory, IOPS, network), top 10 VMs |
+| `hvm-bottlenecks.json` | same | PSI (CPU, memory, I/O), load per core, vCPU wait, swap and page faults, disk busy and latency, noisy neighbours, drops and errors |
+| `hvm-capacity.json` | same | vCPU : core and memory allocation per host, idle cores, available memory, 30 day trends |
+| `kubernetes-pods.json` | Prometheus of the HKS cluster | node-exporter, kube-state-metrics and kubelet metrics (kube-prometheus) |
 
-Panels use relative paths (`/api/...`); Infinity prefixes the data source URL. Tested on Grafana
-13.2.2 with Infinity 4.0.0 against Morpheus 9.0.2.
+The three `hvm-*` dashboards expect node_exporter (9100) and prometheus-libvirt-exporter (9177) on
+every HVM host and a Prometheus with the jobs `node` and `libvirt` (see `prometheus-chart`, value
+`hostScrape`). Import them once per Prometheus: a Morpheus Enterprise site picks its own Prometheus,
+a VM Essentials site its own. When one Grafana holds both, import each file twice into separate
+folders and change the uid on the second import.
+
+Host names come from `node_uname_info` (label `nodename`); libvirt metrics are joined to it on
+`instance`, which the chart sets to the host address without the port. VM counters use a rate that
+skips any window where the counter read 0 between non-zero values, because libvirt can return 0 for
+a block device once and that single sample would otherwise show as a very large spike.
+
+Panels of the overview dashboards use relative paths (`/api/...`); Infinity prefixes the data source
+URL. Tested on Grafana 13.2.2 with Infinity 4.0.0 against Morpheus 9.0.2, Prometheus 3.5.0,
+node_exporter 1.7.0 and prometheus-libvirt-exporter 2.6.0.

@@ -9,7 +9,14 @@ import javax.net.ssl.SSLSession
 import java.security.cert.X509Certificate
 
 // =============================================================================
-// grafana_connect_morpheus.groovy  (v1.6.1 - column order)
+// grafana_connect_morpheus.groovy  (v1.8.0 - dashboards from the published JSON files)
+// v1.8.0: the dashboards are no longer built in this script. The task downloads the
+//         published JSON files (Dashboard Source URL, default the morpheus-k8
+//         repository on GitHub) and imports them with Grafana's import API, so the
+//         catalog and a manual setup show the same dashboards. New optional form
+//         field 'HVM Hosts Prometheus URL': data source 'Prometheus HVM Hosts' and
+//         the dashboards HVM Hosts and VMs, HVM Bottlenecks and HVM Capacity
+//         (node_exporter + prometheus-libvirt-exporter on the HVM hosts).
 // v1.6.1: every table keeps the column order defined here (Infinity's backend
 //         parser sorts columns alphabetically, which pushed Name/VM/Host to
 //         the right); CPU / Memory bar labels show only the host name.
@@ -53,8 +60,8 @@ import java.security.cert.X509Certificate
 //   2. installs the Infinity data source plugin in Grafana (skipped if present)
 //   3. creates or updates the data source "Morpheus" (Bearer token, kept by
 //      Grafana in its encrypted secureJsonData)
-//   4. creates or overwrites the dashboard "Morpheus Overview", with one
-//      performance row per cluster (last CPU / memory sample of each host)
+//   4. imports the published dashboards: Morpheus Overview (Infinity), Kubernetes
+//      Pods (Prometheus URL) and the three HVM dashboards (HVM Hosts Prometheus URL)
 // Running it again is safe: every step is create-or-update.
 //
 // Auth: Morpheus calls (Cypher) run on the executing user's token
@@ -73,14 +80,21 @@ import java.security.cert.X509Certificate
 //   grafanaPassword : Grafana admin password (Password, optional after the
 //                     first run)
 //   readerUsername  : read-only Morpheus API user (default grafana-reader)
+//   hostPrometheusUrl : optional, Prometheus that scrapes the HVM hosts; empty =
+//                     skip the HVM dashboards
+//   dashboardSource : optional, http(s) folder with the dashboard JSON files;
+//                     empty = the morpheus-k8 repository on GitHub
 // =============================================================================
 
 final String PLUGIN_ID   = "yesoreyeram-infinity-datasource"
 final String DS_NAME     = "Morpheus"
-final String DASH_UID    = "morpheus-overview"
 final String PROM_NAME   = "Prometheus"
 final String OLD_PROM    = "Prometheus HKS"
-final String PODS_UID    = "kubernetes-pods"
+final String HOST_PROM_NAME = "Prometheus HVM Hosts"
+final String DEFAULT_DASH_SOURCE = "https://raw.githubusercontent.com/emrbaykal/morpheus-k8/main/grafana-morpheus/dashboards"
+final String OVERVIEW_FILE = "morpheus-overview.json"
+final String PODS_FILE   = "kubernetes-pods.json"
+final List   HVM_FILES   = ["hvm-hosts-vms.json", "hvm-bottlenecks.json", "hvm-capacity.json"]
 final String OAUTH_CLIENT = "grafana"
 
 def opts = [
@@ -265,232 +279,88 @@ if (gCode == 200 && gJson?.id) {
     dsAction = "created"
 }
 
-// --- 5. dashboard ------------------------------------------------------------------
-def ds = [type: PLUGIN_ID, uid: dsUid]
-def q = { String path, String root, List cols ->
-    [refId: "A", datasource: ds, type: "json", source: "url", parser: "backend", format: "table",
-     url: morpheusBase + path, url_options: [method: "GET", data: ""], root_selector: root,
-     columns: cols.collect { c -> [selector: c[0], text: c[1], type: (c.size() > 2 ? c[2] : "string")] }]
+// --- 5. dashboards: the published JSON files, imported with Grafana's import API ---
+// The same files a reader imports by hand, so the catalog and the manual setup show
+// the same dashboards. Each file names its data source as an __inputs entry.
+def dashSource = (opts.dashboardSource?.toString()?.trim() ?: DEFAULT_DASH_SOURCE).replaceAll('/+$', '')
+if (!(dashSource ==~ /^https?:\/\/\S+$/)) {
+    throw new RuntimeException("Dashboard source must be an http(s) URL of the folder with the dashboard JSON files, got '${dashSource}'.")
 }
-def stat = { int id, String title, String path, int x ->
-    [id: id, type: "stat", title: title, datasource: ds, gridPos: [h: 4, w: 6, x: x, y: 0],
-     targets: [q(path, "meta", [["total", "Total", "number"]])],
-     options: [reduceOptions: [calcs: ["lastNotNull"], fields: "", values: false], colorMode: "none", graphMode: "none"]]
-}
-// The Infinity backend parser returns columns in alphabetical order; this
-// "organize" step puts them back in the order they are listed here.
-def ordered = { List names, List hide = [] ->
-    def idx = [:]
-    names.eachWithIndex { n, i -> idx[n] = i }
-    [id: "organize", options: [indexByName: idx, excludeByName: hide.collectEntries { [(it): true] }, renameByName: [:]]]
-}
-def table = { int id, String title, String path, String root, List cols, int x, int y, int w, int h ->
-    [id: id, type: "table", title: title, datasource: ds, gridPos: [h: h, w: w, x: x, y: y],
-     targets: [q(path, root, cols)], transformations: [ordered(cols.collect { it[1] })]]
-}
-// Performance rows: one per cluster, built from the clusters the caller can see.
-def perfPanels = []
-int pid = 100
-int py = 32
-def clusterList = (morpheusGet("/api/clusters?max=50")?.clusters ?: []).sort { it.name?.toString() }
-clusterList.each { c ->
-    def hostCount = morpheusGet("/api/servers?max=1&clusterId=" + c.id)?.meta?.total ?: 0
-    if (hostCount == 0) { return }
-    def path = "/api/servers?max=200&clusterId=" + c.id
-    def cols = [["name", "Host", "string"], ["powerState", "Power", "string"],
-                ["stats.cpuUsage", "CPU", "number"], ["stats.usedMemory", "Used memory", "number"],
-                ["stats.maxMemory", "Max memory", "number"], ["stats.netTxUsage", "Net Tx", "number"],
-                ["stats.netRxUsage", "Net Rx", "number"], ["stats.totalIOPS", "IOPS", "number"],
-                ["stats.usedSwap", "Swap used", "number"], ["stats.ts", "Sampled at", "string"]]
-    def memPct = [id: "calculateField", options: [mode: "binary", alias: "Memory",
-                  binary: [left: "Used memory", operator: "/", right: "Max memory"], replaceFields: false]]
-    perfPanels << [id: pid++, type: "row", title: "${c.name} - performance (last sample Morpheus holds)".toString(),
-                   collapsed: false, gridPos: [h: 1, w: 24, x: 0, y: py], panels: []]
-    // Bar labels come from the text columns, so only the host name is kept.
-    def barLabel = ordered(["Host"], ["Power", "Sampled at"])
-    def hostOrder = ["Host", "Power", "CPU", "Memory", "Used memory", "Max memory", "Net Tx", "Net Rx",
-                     "IOPS", "Swap used", "Sampled at"]
-    perfPanels << [id: pid++, type: "bargauge", title: "CPU %", datasource: ds, gridPos: [h: 8, w: 6, x: 0, y: py + 1],
-                   targets: [q(path, "servers", cols)], transformations: [barLabel],
-                   fieldConfig: [defaults: [unit: "percent", min: 0, max: 100, decimals: 1], overrides: []],
-                   options: [reduceOptions: [values: true, calcs: [], fields: "/^CPU\$/"], orientation: "horizontal",
-                             displayMode: "basic", showUnfilled: true]]
-    perfPanels << [id: pid++, type: "bargauge", title: "Memory used", datasource: ds, gridPos: [h: 8, w: 6, x: 6, y: py + 1],
-                   targets: [q(path, "servers", cols)], transformations: [memPct, barLabel],
-                   fieldConfig: [defaults: [unit: "percentunit", min: 0, max: 1, decimals: 1], overrides: []],
-                   options: [reduceOptions: [values: true, calcs: [], fields: "/^Memory\$/"], orientation: "horizontal",
-                             displayMode: "basic", showUnfilled: true]]
-    perfPanels << [id: pid++, type: "table", title: "Hosts / nodes", datasource: ds, gridPos: [h: 8, w: 12, x: 12, y: py + 1],
-                   targets: [q(path, "servers", cols)], transformations: [memPct, ordered(hostOrder)],
-                   fieldConfig: [defaults: [:], overrides: [
-                       [matcher: [id: "byName", options: "CPU"], properties: [[id: "unit", value: "percent"], [id: "decimals", value: 1]]],
-                       [matcher: [id: "byName", options: "Used memory"], properties: [[id: "unit", value: "bytes"]]],
-                       [matcher: [id: "byName", options: "Max memory"], properties: [[id: "unit", value: "bytes"]]],
-                       [matcher: [id: "byName", options: "Swap used"], properties: [[id: "unit", value: "bytes"]]],
-                       [matcher: [id: "byName", options: "Memory"], properties: [[id: "unit", value: "percentunit"], [id: "decimals", value: 1]]]]]]
-    py += 9
-}
-
-// Morpheus appliance health, clouds, monitoring.
-def healthCols = [["cpu.cpuTotalLoad", "CPU", "number"], ["memory.memoryPercent", "JVM memory", "number"],
-                  ["memory.systemMemoryPercent", "System memory", "number"], ["storage.percent", "Storage", "number"],
-                  ["elastic.status", "Elasticsearch", "string"], ["rabbit.status", "RabbitMQ", "string"],
-                  ["database.status", "Database", "string"]]
-def healthStat = { String title, String field, String unit, Number max, int x ->
-    [id: pid++, type: "stat", title: title, datasource: ds, gridPos: [h: 4, w: 4, x: x, y: py + 1],
-     targets: [q("/api/health", "health", healthCols)],
-     fieldConfig: [defaults: [unit: unit, min: 0, max: max, decimals: 1], overrides: []],
-     options: [reduceOptions: [calcs: ["lastNotNull"], fields: "/^" + field + "\$/", values: false],
-               colorMode: "none", graphMode: "none", textMode: "value"]]
-}
-perfPanels << [id: pid++, type: "row", title: "Morpheus appliance", collapsed: false,
-               gridPos: [h: 1, w: 24, x: 0, y: py], panels: []]
-perfPanels << healthStat("CPU", "CPU", "percent", 100, 0)
-perfPanels << healthStat("JVM memory", "JVM memory", "percentunit", 1, 4)
-perfPanels << healthStat("System memory", "System memory", "percentunit", 1, 8)
-perfPanels << healthStat("Storage", "Storage", "percent", 100, 12)
-perfPanels << [id: pid++, type: "table", title: "Services", datasource: ds, gridPos: [h: 4, w: 8, x: 16, y: py + 1],
-               targets: [q("/api/health", "health", healthCols)],
-               transformations: [ordered(["Database", "Elasticsearch", "RabbitMQ"], ["CPU", "JVM memory", "System memory", "Storage"])]]
-perfPanels << table(pid++, "Appliance storage", "/api/health", "health.storage.files",
-                    [["path", "Path"], ["name", "Device"], ["percent", "Used %", "number"], ["total", "Size", "number"]],
-                    0, py + 5, 12, 6)
-perfPanels << table(pid++, "Clouds", "/api/zones?max=100", "zones",
-                    [["name", "Cloud"], ["zoneType.name", "Type"], ["status", "Status"], ["lastSync", "Last sync"]],
-                    12, py + 5, 12, 6)
-py += 11
-perfPanels << [id: pid++, type: "row", title: "Monitoring", collapsed: false,
-               gridPos: [h: 1, w: 24, x: 0, y: py], panels: []]
-perfPanels << table(pid++, "Checks", "/api/monitoring/checks?max=200", "checks",
-                    [["name", "Check"], ["checkType.name", "Type"], ["health", "Health", "number"],
-                     ["lastRunDate", "Last run"], ["lastError", "Last error"]],
-                    0, py + 1, 14, 8)
-perfPanels << table(pid++, "Incidents", "/api/monitoring/incidents?max=50", "incidents",
-                    [["displayName", "Incident"], ["status", "Status"], ["severity", "Severity"], ["startDate", "Start"]],
-                    14, py + 1, 10, 8)
-
-// Virtual machines, one table per cloud that has any.
-py += 9
-def vmCols = [["name", "VM", "string"], ["powerState", "Power", "string"], ["stats.cpuUsage", "CPU", "number"],
-              ["stats.usedMemory", "Used memory", "number"], ["stats.maxMemory", "Max memory", "number"],
-              ["stats.usedStorage", "Used disk", "number"], ["stats.maxStorage", "Max disk", "number"],
-              ["stats.netTxUsage", "Net Tx", "number"], ["stats.netRxUsage", "Net Rx", "number"],
-              ["stats.totalIOPS", "IOPS", "number"], ["stats.ts", "Sampled at", "string"]]
-def byteCols = ["Used memory", "Max memory", "Used disk", "Max disk"]
-def vmZones = (morpheusGet("/api/zones?max=100")?.zones ?: []).sort { it.name?.toString() }
-def vmSections = []
-vmZones.each { z ->
-    def cnt = morpheusGet("/api/servers?max=1&vm=true&zoneId=" + z.id)?.meta?.total ?: 0
-    if (cnt > 0) { vmSections << [zone: z, count: cnt] }
-}
-if (!vmSections.isEmpty()) {
-    perfPanels << [id: pid++, type: "row", title: "Virtual machines (last sample Morpheus holds)", collapsed: false,
-                   gridPos: [h: 1, w: 24, x: 0, y: py], panels: []]
-    py += 1
-    vmSections.each { sec ->
-        int h = Math.min(4 + (sec.count as int), 14)
-        def overrides = byteCols.collect { n -> [matcher: [id: "byName", options: n], properties: [[id: "unit", value: "bytes"]]] }
-        overrides << [matcher: [id: "byName", options: "CPU"], properties: [[id: "unit", value: "percent"], [id: "decimals", value: 1]]]
-        perfPanels << [id: pid++, type: "table", title: "${sec.zone.name} - ${sec.count} VMs".toString(), datasource: ds,
-                       gridPos: [h: h, w: 24, x: 0, y: py],
-                       targets: [q("/api/servers?max=500&vm=true&zoneId=" + sec.zone.id, "servers", vmCols)],
-                       transformations: [ordered(vmCols.collect { it[1] })],
-                       fieldConfig: [defaults: [:], overrides: overrides]]
-        py += h
+def fetchDashboard = { String file ->
+    def (fCode, fJson, fBody) = http("GET", dashSource + "/" + file, [:], null)
+    if (fCode != 200 || !(fJson instanceof Map) || !fJson.panels) {
+        throw new RuntimeException("Could not read ${dashSource}/${file} (HTTP ${fCode}). The Morpheus appliance must reach " +
+                "the dashboard source; set 'Dashboard Source URL' to a location it can reach.")
     }
+    return fJson
+}
+def importDashboard = { String file, Map inputs ->
+    def d = fetchDashboard(file)
+    d.remove("id")
+    def body = [dashboard: d, overwrite: true, folderUid: "",
+                inputs: inputs.collect { k, v -> [name: k, type: "datasource", pluginId: v.type, value: v.uid] }]
+    def (iCode, iJson, iBody) = grafana("POST", "/api/dashboards/import", body)
+    if (iCode >= 400) {
+        throw new RuntimeException("Importing ${file} failed (HTTP ${iCode}): ${apiMsg(iJson, iBody)}")
+    }
+    return grafanaUrl + (iJson?.importedUrl ?: "/d/" + d.uid)
+}
+def imported = []
+imported << importDashboard(OVERVIEW_FILE, [DS_MORPHEUS: [type: PLUGIN_ID, uid: dsUid]])
+
+// Prometheus data source: create or update, keep it only if it answers.
+def upsertPrometheus = { String name, String url ->
+    def body = [name: name, type: "prometheus", access: "proxy", url: url, jsonData: [timeInterval: "30s"]]
+    def (gc, gj, gb) = grafana("GET", "/api/datasources/name/" + URLEncoder.encode(name, "UTF-8"), null)
+    def uid = null
+    if (gc == 200 && gj?.id) {
+        body.uid = gj.uid
+        def (uc, uj, ub) = grafana("PUT", "/api/datasources/" + gj.id, body)
+        if (uc < 400) { uid = gj.uid }
+    } else {
+        def (cc, cj, cb) = grafana("POST", "/api/datasources", body)
+        if (cc < 400) { uid = cj?.datasource?.uid ?: cj?.uid }
+    }
+    if (!uid) { return null }
+    def (hc, hj, hb) = grafana("GET", "/api/datasources/uid/" + uid + "/health", null)
+    if (hc == 200 && hj?.status?.toString() == "OK") { return uid }
+    grafana("DELETE", "/api/datasources/uid/" + uid, null)
+    return null
+}
+// Existing data source of that name, if it answers (used when the URL field is empty).
+def existingPrometheus = { String name ->
+    def (gc, gj, gb) = grafana("GET", "/api/datasources/name/" + URLEncoder.encode(name, "UTF-8"), null)
+    if (gc != 200 || !gj?.uid) { return null }
+    def (hc, hj, hb) = grafana("GET", "/api/datasources/uid/" + gj.uid + "/health", null)
+    return (hc == 200 && hj?.status?.toString() == "OK") ? gj.uid : null
 }
 
-def dashboard = [
-    uid: DASH_UID, title: "Morpheus Overview", tags: ["morpheus"], timezone: "browser",
-    refresh: "5m", schemaVersion: 39, time: [from: "now-24h", to: "now"],
-    panels: [
-        stat(1, "Apps", "/api/apps?max=1", 0),
-        stat(2, "Hosts and VMs", "/api/servers?max=1", 6),
-        stat(3, "Kubernetes clusters and others", "/api/clusters?max=1", 12),
-        stat(4, "Clouds", "/api/zones?max=1", 18),
-        table(5, "Apps", "/api/apps?max=200", "apps",
-              [["name", "Name"], ["type", "Type"], ["status", "Status"], ["appContext", "Environment"], ["group.name", "Group"]],
-              0, 4, 12, 8),
-        table(6, "Clusters", "/api/clusters?max=200", "clusters",
-              [["name", "Name"], ["type.name", "Type"], ["status", "Status"], ["zone.name", "Cloud"]],
-              12, 4, 12, 8),
-        table(7, "Hosts and VMs", "/api/servers?max=500", "servers",
-              [["name", "Name"], ["powerState", "Power"], ["status", "Status"], ["zone.name", "Cloud"],
-               ["computeServerType.name", "Type"], ["osType", "OS"]],
-              0, 12, 24, 10),
-        table(8, "Recent activity", "/api/activity?max=50", "activity",
-              [["ts", "Time"], ["name", "Object"], ["activityType", "Type"], ["message", "Message"], ["userName", "User"]],
-              0, 22, 24, 10)
-    ] + perfPanels
-]
-def (dCode, dJson, dBody) = grafana("POST", "/api/dashboards/db", [dashboard: dashboard, overwrite: true, message: "Morpheus catalog: Grafana - Connect Morpheus"])
-if (dCode >= 400) {
-    throw new RuntimeException("Importing the dashboard failed (HTTP ${dCode}): ${apiMsg(dJson, dBody)}")
-}
-
-// --- 6. Prometheus (optional, URL from the form) -----------------------------------
-def promNote
-def promUrl = opts.prometheusUrl?.toString()?.trim()?.replaceAll('/+$', '')
+// --- 6. Prometheus of the Kubernetes cluster (optional) ------------------------------
 // Remove the data source name used before v1.5.0.
 def (ogCode, ogJson, ogBody) = grafana("GET", "/api/datasources/name/" + URLEncoder.encode(OLD_PROM, "UTF-8"), null)
 if (ogCode == 200 && ogJson?.uid) { grafana("DELETE", "/api/datasources/uid/" + ogJson.uid, null) }
-def (pgCode, pgJson, pgBody) = grafana("GET", "/api/datasources/name/" + URLEncoder.encode(PROM_NAME, "UTF-8"), null)
-def promUid = null
-def promOk = false
-if (promUrl) {
-    def promBody = [name: PROM_NAME, type: "prometheus", access: "proxy", url: promUrl, jsonData: [timeInterval: "30s"]]
-    if (pgCode == 200 && pgJson?.id) {
-        promBody.uid = pgJson.uid
-        def (puCode, puJson, puBody) = grafana("PUT", "/api/datasources/" + pgJson.id, promBody)
-        if (puCode < 400) { promUid = pgJson.uid }
-    } else {
-        def (pcCode, pcJson, pcBody) = grafana("POST", "/api/datasources", promBody)
-        if (pcCode < 400) { promUid = pcJson?.datasource?.uid ?: pcJson?.uid }
-    }
-    if (promUid) {
-        def (phCode, phJson, phBody) = grafana("GET", "/api/datasources/uid/" + promUid + "/health", null)
-        promOk = (phCode == 200 && phJson?.status?.toString() == "OK")
-        if (!promOk) { grafana("DELETE", "/api/datasources/uid/" + promUid, null) }
-    }
-} else if (pgCode == 200 && pgJson?.uid) {
-    // No URL given this run: leave an existing working data source alone.
-    def (phCode, phJson, phBody) = grafana("GET", "/api/datasources/uid/" + pgJson.uid + "/health", null)
-    promOk = (phCode == 200 && phJson?.status?.toString() == "OK")
-    promUid = pgJson.uid
-}
-if (!promOk) {
-    promNote = promUrl ? "Prometheus at ${promUrl} did not answer - data source removed, pods dashboard skipped" : "no Prometheus URL - pods dashboard skipped"
+def promUrl = opts.prometheusUrl?.toString()?.trim()?.replaceAll('/+$', '')
+def promUid = promUrl ? upsertPrometheus(PROM_NAME, promUrl) : existingPrometheus(PROM_NAME)
+def promNote
+if (promUid) {
+    imported << importDashboard(PODS_FILE, [DS_PROMETHEUS: [type: "prometheus", uid: promUid]])
+    promNote = "data source '${PROM_NAME}' ready"
 } else {
-    def pds = [type: "prometheus", uid: promUid]
-    def ns = 'namespace=~"$namespace"'
-    def ts = { int id, String title, String expr, String legend, String unit, int x, int y, int w ->
-        [id: id, type: "timeseries", title: title, datasource: pds, gridPos: [h: 8, w: w, x: x, y: y],
-         targets: [[refId: "A", datasource: pds, expr: expr, legendFormat: legend]],
-         fieldConfig: [defaults: [unit: unit], overrides: []],
-         options: [legend: [displayMode: "table", placement: "right", calcs: ["lastNotNull", "max"]]]]
-    }
-    def pods = [
-        uid: PODS_UID, title: "Kubernetes Pods", tags: ["kubernetes", "morpheus"], timezone: "browser",
-        refresh: "1m", schemaVersion: 39, time: [from: "now-6h", to: "now"],
-        templating: [list: [[name: "namespace", label: "Namespace", type: "query", datasource: pds,
-                             query: [query: "label_values(kube_pod_info, namespace)", refId: "ns"],
-                             definition: "label_values(kube_pod_info, namespace)", refresh: 1,
-                             multi: true, includeAll: true, allValue: ".*", current: [text: "All", value: '$__all']]]],
-        panels: [
-            ts(1, "Node CPU %", '100 - avg by (instance) (rate(node_cpu_seconds_total{mode="idle"}[5m])) * 100', "{{instance}}", "percent", 0, 0, 12),
-            ts(2, "Node memory used %", '(1 - node_memory_MemAvailable_bytes / node_memory_MemTotal_bytes) * 100', "{{instance}}", "percent", 12, 0, 12),
-            ts(3, "Pod CPU (cores)", 'sum by (namespace, pod) (rate(container_cpu_usage_seconds_total{' + ns + ', container!=""}[5m]))', "{{namespace}}/{{pod}}", "short", 0, 8, 12),
-            ts(4, "Pod memory (working set)", 'sum by (namespace, pod) (container_memory_working_set_bytes{' + ns + ', container!=""})', "{{namespace}}/{{pod}}", "bytes", 12, 8, 12),
-            ts(5, "Pod network receive", 'sum by (namespace, pod) (rate(container_network_receive_bytes_total{' + ns + '}[5m]))', "{{namespace}}/{{pod}}", "Bps", 0, 16, 12),
-            ts(6, "Pod network transmit", 'sum by (namespace, pod) (rate(container_network_transmit_bytes_total{' + ns + '}[5m]))', "{{namespace}}/{{pod}}", "Bps", 12, 16, 12),
-            ts(7, "PVC used %", 'kubelet_volume_stats_used_bytes{' + ns + '} / kubelet_volume_stats_capacity_bytes{' + ns + '} * 100', "{{namespace}}/{{persistentvolumeclaim}}", "percent", 0, 24, 24)
-        ]
-    ]
-    def (kCode, kJson, kBody) = grafana("POST", "/api/dashboards/db", [dashboard: pods, overwrite: true, message: "Morpheus catalog: Grafana - Connect Morpheus"])
-    if (kCode >= 400) {
-        throw new RuntimeException("Importing the Kubernetes Pods dashboard failed (HTTP ${kCode}): ${apiMsg(kJson, kBody)}")
-    }
-    promNote = "data source '${PROM_NAME}' ready, dashboard ${grafanaUrl}${kJson?.url ?: '/d/' + PODS_UID}"
+    promNote = promUrl ? "Prometheus at ${promUrl} did not answer - pods dashboard skipped" : "no Prometheus URL - pods dashboard skipped"
 }
 
-println "Grafana ${grafanaUrl}: plugin ${pluginAction}, data source '${DS_NAME}' ${dsAction}, dashboard ${grafanaUrl}${dJson?.url ?: '/d/' + DASH_UID}; ${promNote}; grafana-reader token renewed."
+// --- 7. Prometheus of the HVM hosts (optional) ---------------------------------------
+// node_exporter + prometheus-libvirt-exporter on every HVM host, scraped by a
+// Prometheus with the jobs 'node' and 'libvirt' (prometheus-chart, value hostScrape).
+def hostPromUrl = opts.hostPrometheusUrl?.toString()?.trim()?.replaceAll('/+$', '')
+def hostPromUid = hostPromUrl ? upsertPrometheus(HOST_PROM_NAME, hostPromUrl) : existingPrometheus(HOST_PROM_NAME)
+def hostNote
+if (hostPromUid) {
+    HVM_FILES.each { f -> imported << importDashboard(f, [DS_PROMETHEUS: [type: "prometheus", uid: hostPromUid]]) }
+    hostNote = "data source '${HOST_PROM_NAME}' ready, HVM dashboards imported"
+} else {
+    hostNote = hostPromUrl ? "HVM hosts Prometheus at ${hostPromUrl} did not answer - HVM dashboards skipped" : "no HVM hosts Prometheus URL - HVM dashboards skipped"
+}
+
+println "Grafana ${grafanaUrl}: plugin ${pluginAction}, data source '${DS_NAME}' ${dsAction}; ${promNote}; ${hostNote}; " +
+        "dashboards from ${dashSource}: ${imported.join(', ')}; ${READER_USER} token renewed."

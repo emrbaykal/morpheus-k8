@@ -1,0 +1,1421 @@
+{
+  "__inputs": [
+    {
+      "name": "DS_PROMETHEUS",
+      "label": "Prometheus (HVM host exporters)",
+      "description": "Prometheus that scrapes node_exporter and prometheus-libvirt-exporter on the HVM hosts",
+      "type": "datasource",
+      "pluginId": "prometheus",
+      "pluginName": "Prometheus"
+    }
+  ],
+  "__requires": [
+    {
+      "type": "datasource",
+      "id": "prometheus",
+      "name": "Prometheus",
+      "version": "1.0.0"
+    }
+  ],
+  "uid": "hvm-bottlenecks",
+  "title": "HVM Bottlenecks",
+  "description": "Where HVM hosts and VMs wait: CPU, memory, disk and network",
+  "tags": [
+    "morpheus-hvm"
+  ],
+  "editable": true,
+  "schemaVersion": 39,
+  "time": {
+    "from": "now-6h",
+    "to": "now"
+  },
+  "refresh": "1m",
+  "timezone": "browser",
+  "links": [
+    {
+      "type": "dashboards",
+      "tags": [
+        "morpheus-hvm"
+      ],
+      "asDropdown": true,
+      "title": "HVM dashboards",
+      "includeVars": true,
+      "keepTime": true
+    },
+    {
+      "type": "dashboards",
+      "tags": [
+        "morpheus"
+      ],
+      "asDropdown": true,
+      "title": "Morpheus dashboards"
+    }
+  ],
+  "templating": {
+    "list": [
+      {
+        "name": "host",
+        "label": "Host",
+        "type": "query",
+        "datasource": {
+          "type": "prometheus",
+          "uid": "${DS_PROMETHEUS}"
+        },
+        "query": {
+          "qryType": 1,
+          "query": "label_values(node_uname_info, nodename)",
+          "refId": "host"
+        },
+        "definition": "label_values(node_uname_info, nodename)",
+        "refresh": 2,
+        "multi": true,
+        "includeAll": true,
+        "allValue": ".*",
+        "sort": 1,
+        "current": {
+          "text": [
+            "All"
+          ],
+          "value": [
+            "$__all"
+          ]
+        },
+        "options": []
+      },
+      {
+        "name": "instance",
+        "label": "Instance",
+        "type": "query",
+        "datasource": {
+          "type": "prometheus",
+          "uid": "${DS_PROMETHEUS}"
+        },
+        "hide": 2,
+        "query": {
+          "qryType": 1,
+          "query": "label_values(node_uname_info{nodename=~\"$host\"}, instance)",
+          "refId": "instance"
+        },
+        "definition": "label_values(node_uname_info{nodename=~\"$host\"}, instance)",
+        "refresh": 2,
+        "multi": true,
+        "includeAll": true,
+        "allValue": ".*",
+        "current": {
+          "text": [
+            "All"
+          ],
+          "value": [
+            "$__all"
+          ]
+        },
+        "options": []
+      },
+      {
+        "name": "domain",
+        "label": "VM",
+        "type": "query",
+        "datasource": {
+          "type": "prometheus",
+          "uid": "${DS_PROMETHEUS}"
+        },
+        "query": {
+          "qryType": 1,
+          "query": "label_values(libvirt_domain_info_state{instance=~\"$instance\"}, domain)",
+          "refId": "domain"
+        },
+        "definition": "label_values(libvirt_domain_info_state{instance=~\"$instance\"}, domain)",
+        "refresh": 2,
+        "multi": true,
+        "includeAll": true,
+        "allValue": ".*",
+        "sort": 1,
+        "current": {
+          "text": [
+            "All"
+          ],
+          "value": [
+            "$__all"
+          ]
+        },
+        "options": []
+      }
+    ]
+  },
+  "panels": [
+    {
+      "id": 2,
+      "type": "row",
+      "title": "CPU",
+      "collapsed": false,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 0
+      },
+      "panels": []
+    },
+    {
+      "type": "timeseries",
+      "title": "CPU pressure (PSI some)",
+      "description": "Share of time at least one task on the host waited for a CPU. Short spikes are normal; a level that stays above roughly 10-20 % means the host is CPU bound.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${DS_PROMETHEUS}"
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "refId": "A",
+          "expr": "100 * rate(node_pressure_cpu_waiting_seconds_total{instance=~\"$instance\"}[$__rate_interval]) * on(instance) group_left(nodename) node_uname_info",
+          "editorMode": "code",
+          "range": true,
+          "legendFormat": "{{nodename}}"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percent",
+          "custom": {
+            "lineWidth": 1,
+            "fillOpacity": 0,
+            "showPoints": "never",
+            "spanNulls": true,
+            "stacking": {
+              "mode": "none"
+            }
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "table",
+          "placement": "right",
+          "calcs": [
+            "lastNotNull",
+            "max"
+          ],
+          "sortBy": "Max",
+          "sortDesc": true
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "id": 3,
+      "gridPos": {
+        "h": 8,
+        "w": 8,
+        "x": 0,
+        "y": 1
+      }
+    },
+    {
+      "type": "timeseries",
+      "title": "Load per core",
+      "description": "5 minute load average divided by logical CPUs. Above 1 for long periods: more runnable work than CPUs.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${DS_PROMETHEUS}"
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "refId": "A",
+          "expr": "(node_load5{instance=~\"$instance\"} / on (instance) count by (instance) (node_cpu_seconds_total{mode=\"idle\", instance=~\"$instance\"})) * on(instance) group_left(nodename) node_uname_info",
+          "editorMode": "code",
+          "range": true,
+          "legendFormat": "{{nodename}}"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "none",
+          "custom": {
+            "lineWidth": 1,
+            "fillOpacity": 0,
+            "showPoints": "never",
+            "spanNulls": true,
+            "stacking": {
+              "mode": "none"
+            }
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "table",
+          "placement": "right",
+          "calcs": [
+            "lastNotNull",
+            "max"
+          ],
+          "sortBy": "Max",
+          "sortDesc": true
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "id": 4,
+      "gridPos": {
+        "h": 8,
+        "w": 8,
+        "x": 8,
+        "y": 1
+      }
+    },
+    {
+      "type": "timeseries",
+      "title": "Top 10 VMs by vCPU wait %",
+      "description": "Time the vCPUs of a VM were ready to run but waited for a physical CPU, per vCPU. A few percent is noticeable inside the guest; this is the first sign of CPU overcommit.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${DS_PROMETHEUS}"
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "refId": "A",
+          "expr": "topk(10, (100 * sum by (instance, domain) ((rate(libvirt_domain_vcpu_delay_seconds_total{instance=~\"$instance\", domain=~\"$domain\"}[$__rate_interval]) unless (resets(libvirt_domain_vcpu_delay_seconds_total{instance=~\"$instance\", domain=~\"$domain\"}[$__rate_interval]) > 0 or (min_over_time(libvirt_domain_vcpu_delay_seconds_total{instance=~\"$instance\", domain=~\"$domain\"}[$__rate_interval]) == 0 and max_over_time(libvirt_domain_vcpu_delay_seconds_total{instance=~\"$instance\", domain=~\"$domain\"}[$__rate_interval]) > 0)))) / on (instance, domain) libvirt_domain_info_virtual_cpus{instance=~\"$instance\", domain=~\"$domain\"}) * on(instance) group_left(nodename) node_uname_info)",
+          "range": true,
+          "legendFormat": "{{domain}} ({{nodename}})",
+          "editorMode": "code"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percent",
+          "custom": {
+            "lineWidth": 1,
+            "fillOpacity": 0,
+            "showPoints": "never",
+            "spanNulls": true,
+            "stacking": {
+              "mode": "none"
+            }
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "table",
+          "placement": "right",
+          "calcs": [
+            "lastNotNull",
+            "max"
+          ],
+          "sortBy": "Max",
+          "sortDesc": true
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "id": 5,
+      "gridPos": {
+        "h": 8,
+        "w": 8,
+        "x": 16,
+        "y": 1
+      }
+    },
+    {
+      "type": "bargauge",
+      "title": "vCPU wait % now",
+      "description": "Current vCPU wait per VM, highest first.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${DS_PROMETHEUS}"
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "refId": "A",
+          "expr": "topk(15, (100 * sum by (instance, domain) ((rate(libvirt_domain_vcpu_delay_seconds_total{instance=~\"$instance\", domain=~\"$domain\"}[$__rate_interval]) unless (resets(libvirt_domain_vcpu_delay_seconds_total{instance=~\"$instance\", domain=~\"$domain\"}[$__rate_interval]) > 0 or (min_over_time(libvirt_domain_vcpu_delay_seconds_total{instance=~\"$instance\", domain=~\"$domain\"}[$__rate_interval]) == 0 and max_over_time(libvirt_domain_vcpu_delay_seconds_total{instance=~\"$instance\", domain=~\"$domain\"}[$__rate_interval]) > 0)))) / on (instance, domain) libvirt_domain_info_virtual_cpus{instance=~\"$instance\", domain=~\"$domain\"}) * on(instance) group_left(nodename) node_uname_info)",
+          "instant": true,
+          "range": false,
+          "legendFormat": "{{domain}} ({{nodename}})",
+          "editorMode": "code"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percent",
+          "min": 0,
+          "decimals": 1
+        },
+        "overrides": []
+      },
+      "options": {
+        "orientation": "horizontal",
+        "displayMode": "basic",
+        "valueMode": "color",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "values": false
+        },
+        "showUnfilled": true,
+        "minVizHeight": 10,
+        "maxVizHeight": 22
+      },
+      "id": 6,
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 9
+      }
+    },
+    {
+      "type": "bargauge",
+      "title": "Host CPU % now",
+      "description": "Current host CPU use.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${DS_PROMETHEUS}"
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "refId": "A",
+          "expr": "topk(15, 100 * (1 - avg by (instance) (rate(node_cpu_seconds_total{mode=\"idle\", instance=~\"$instance\"}[$__rate_interval]))) * on(instance) group_left(nodename) node_uname_info)",
+          "instant": true,
+          "range": false,
+          "legendFormat": "{{nodename}}",
+          "editorMode": "code"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percent",
+          "min": 0,
+          "decimals": 1,
+          "max": 100
+        },
+        "overrides": []
+      },
+      "options": {
+        "orientation": "horizontal",
+        "displayMode": "basic",
+        "valueMode": "color",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "values": false
+        },
+        "showUnfilled": true,
+        "minVizHeight": 10,
+        "maxVizHeight": 22
+      },
+      "id": 7,
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 9
+      }
+    },
+    {
+      "id": 8,
+      "type": "row",
+      "title": "Memory",
+      "collapsed": false,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 17
+      },
+      "panels": []
+    },
+    {
+      "type": "timeseries",
+      "title": "Memory pressure (PSI)",
+      "description": "some: at least one task waited for memory (reclaim, swap-in). full: all tasks waited at the same time. Any sustained non-zero 'full' value needs attention.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${DS_PROMETHEUS}"
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "refId": "A",
+          "expr": "100 * rate(node_pressure_memory_waiting_seconds_total{instance=~\"$instance\"}[$__rate_interval]) * on(instance) group_left(nodename) node_uname_info",
+          "editorMode": "code",
+          "range": true,
+          "legendFormat": "{{nodename}} some"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "refId": "B",
+          "expr": "100 * rate(node_pressure_memory_stalled_seconds_total{instance=~\"$instance\"}[$__rate_interval]) * on(instance) group_left(nodename) node_uname_info",
+          "editorMode": "code",
+          "range": true,
+          "legendFormat": "{{nodename}} full"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percent",
+          "custom": {
+            "lineWidth": 1,
+            "fillOpacity": 0,
+            "showPoints": "never",
+            "spanNulls": true,
+            "stacking": {
+              "mode": "none"
+            }
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "table",
+          "placement": "right",
+          "calcs": [
+            "lastNotNull",
+            "max"
+          ],
+          "sortBy": "Max",
+          "sortDesc": true
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "id": 9,
+      "gridPos": {
+        "h": 8,
+        "w": 8,
+        "x": 0,
+        "y": 18
+      }
+    },
+    {
+      "type": "timeseries",
+      "title": "Host memory used %",
+      "description": "100 - MemAvailable / MemTotal.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${DS_PROMETHEUS}"
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "refId": "A",
+          "expr": "100 * (1 - node_memory_MemAvailable_bytes{instance=~\"$instance\"} / node_memory_MemTotal_bytes{instance=~\"$instance\"}) * on(instance) group_left(nodename) node_uname_info",
+          "editorMode": "code",
+          "range": true,
+          "legendFormat": "{{nodename}}"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percent",
+          "custom": {
+            "lineWidth": 1,
+            "fillOpacity": 0,
+            "showPoints": "never",
+            "spanNulls": true,
+            "stacking": {
+              "mode": "none"
+            }
+          },
+          "min": 0,
+          "max": 100
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "table",
+          "placement": "right",
+          "calcs": [
+            "lastNotNull",
+            "max"
+          ],
+          "sortBy": "Max",
+          "sortDesc": true
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "id": 10,
+      "gridPos": {
+        "h": 8,
+        "w": 8,
+        "x": 8,
+        "y": 18
+      }
+    },
+    {
+      "type": "timeseries",
+      "title": "Host swap used",
+      "description": "Swap in use on the host. Growth here while PSI memory rises means the host is short of memory.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${DS_PROMETHEUS}"
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "refId": "A",
+          "expr": "(node_memory_SwapTotal_bytes{instance=~\"$instance\"} - node_memory_SwapFree_bytes{instance=~\"$instance\"}) * on(instance) group_left(nodename) node_uname_info",
+          "editorMode": "code",
+          "range": true,
+          "legendFormat": "{{nodename}}"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "bytes",
+          "custom": {
+            "lineWidth": 1,
+            "fillOpacity": 0,
+            "showPoints": "never",
+            "spanNulls": true,
+            "stacking": {
+              "mode": "none"
+            }
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "table",
+          "placement": "right",
+          "calcs": [
+            "lastNotNull",
+            "max"
+          ],
+          "sortBy": "Max",
+          "sortDesc": true
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "id": 11,
+      "gridPos": {
+        "h": 8,
+        "w": 8,
+        "x": 16,
+        "y": 18
+      }
+    },
+    {
+      "type": "timeseries",
+      "title": "Top 10 VMs by swap in/out",
+      "description": "Guest swap traffic reported by the balloon driver.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${DS_PROMETHEUS}"
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "refId": "A",
+          "expr": "topk(10, ((rate(libvirt_domain_memory_stats_swap_in_bytes{instance=~\"$instance\", domain=~\"$domain\"}[$__rate_interval]) unless (resets(libvirt_domain_memory_stats_swap_in_bytes{instance=~\"$instance\", domain=~\"$domain\"}[$__rate_interval]) > 0 or (min_over_time(libvirt_domain_memory_stats_swap_in_bytes{instance=~\"$instance\", domain=~\"$domain\"}[$__rate_interval]) == 0 and max_over_time(libvirt_domain_memory_stats_swap_in_bytes{instance=~\"$instance\", domain=~\"$domain\"}[$__rate_interval]) > 0))) + (rate(libvirt_domain_memory_stats_swap_out_bytes{instance=~\"$instance\", domain=~\"$domain\"}[$__rate_interval]) unless (resets(libvirt_domain_memory_stats_swap_out_bytes{instance=~\"$instance\", domain=~\"$domain\"}[$__rate_interval]) > 0 or (min_over_time(libvirt_domain_memory_stats_swap_out_bytes{instance=~\"$instance\", domain=~\"$domain\"}[$__rate_interval]) == 0 and max_over_time(libvirt_domain_memory_stats_swap_out_bytes{instance=~\"$instance\", domain=~\"$domain\"}[$__rate_interval]) > 0)))) * on(instance) group_left(nodename) node_uname_info)",
+          "range": true,
+          "legendFormat": "{{domain}} ({{nodename}})",
+          "editorMode": "code"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "Bps",
+          "custom": {
+            "lineWidth": 1,
+            "fillOpacity": 0,
+            "showPoints": "never",
+            "spanNulls": true,
+            "stacking": {
+              "mode": "none"
+            }
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "table",
+          "placement": "right",
+          "calcs": [
+            "lastNotNull",
+            "max"
+          ],
+          "sortBy": "Max",
+          "sortDesc": true
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "id": 12,
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 26
+      }
+    },
+    {
+      "type": "timeseries",
+      "title": "Top 10 VMs by major page faults",
+      "description": "Page faults inside the guest that needed disk I/O. A lasting rise means the guest is short of memory.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${DS_PROMETHEUS}"
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "refId": "A",
+          "expr": "topk(10, ((rate(libvirt_domain_memory_stats_major_fault_total{instance=~\"$instance\", domain=~\"$domain\"}[$__rate_interval]) unless (resets(libvirt_domain_memory_stats_major_fault_total{instance=~\"$instance\", domain=~\"$domain\"}[$__rate_interval]) > 0 or (min_over_time(libvirt_domain_memory_stats_major_fault_total{instance=~\"$instance\", domain=~\"$domain\"}[$__rate_interval]) == 0 and max_over_time(libvirt_domain_memory_stats_major_fault_total{instance=~\"$instance\", domain=~\"$domain\"}[$__rate_interval]) > 0)))) * on(instance) group_left(nodename) node_uname_info)",
+          "range": true,
+          "legendFormat": "{{domain}} ({{nodename}})",
+          "editorMode": "code"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "ops",
+          "custom": {
+            "lineWidth": 1,
+            "fillOpacity": 0,
+            "showPoints": "never",
+            "spanNulls": true,
+            "stacking": {
+              "mode": "none"
+            }
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "table",
+          "placement": "right",
+          "calcs": [
+            "lastNotNull",
+            "max"
+          ],
+          "sortBy": "Max",
+          "sortDesc": true
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "id": 13,
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 26
+      }
+    },
+    {
+      "id": 14,
+      "type": "row",
+      "title": "Disk",
+      "collapsed": false,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 34
+      },
+      "panels": []
+    },
+    {
+      "type": "timeseries",
+      "title": "I/O pressure (PSI)",
+      "description": "Share of time tasks waited for I/O. Rising 'full' means the storage path is the bottleneck.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${DS_PROMETHEUS}"
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "refId": "A",
+          "expr": "100 * rate(node_pressure_io_waiting_seconds_total{instance=~\"$instance\"}[$__rate_interval]) * on(instance) group_left(nodename) node_uname_info",
+          "editorMode": "code",
+          "range": true,
+          "legendFormat": "{{nodename}} some"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "refId": "B",
+          "expr": "100 * rate(node_pressure_io_stalled_seconds_total{instance=~\"$instance\"}[$__rate_interval]) * on(instance) group_left(nodename) node_uname_info",
+          "editorMode": "code",
+          "range": true,
+          "legendFormat": "{{nodename}} full"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percent",
+          "custom": {
+            "lineWidth": 1,
+            "fillOpacity": 0,
+            "showPoints": "never",
+            "spanNulls": true,
+            "stacking": {
+              "mode": "none"
+            }
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "table",
+          "placement": "right",
+          "calcs": [
+            "lastNotNull",
+            "max"
+          ],
+          "sortBy": "Max",
+          "sortDesc": true
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "id": 15,
+      "gridPos": {
+        "h": 8,
+        "w": 8,
+        "x": 0,
+        "y": 35
+      }
+    },
+    {
+      "type": "timeseries",
+      "title": "Host disk busy %",
+      "description": "Busiest physical disk of each host: share of time with I/O in flight. Near 100 % on a single disk means it is saturated (less meaningful for SSD and arrays that serve requests in parallel).",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${DS_PROMETHEUS}"
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "refId": "A",
+          "expr": "max by (instance) (rate(node_disk_io_time_seconds_total{instance=~\"$instance\", device!~\"dm-.*|sr.*|md.*|loop.*|ram.*\"}[$__rate_interval])) * on(instance) group_left(nodename) node_uname_info",
+          "editorMode": "code",
+          "range": true,
+          "legendFormat": "{{nodename}}"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percentunit",
+          "custom": {
+            "lineWidth": 1,
+            "fillOpacity": 0,
+            "showPoints": "never",
+            "spanNulls": true,
+            "stacking": {
+              "mode": "none"
+            }
+          },
+          "min": 0,
+          "max": 1
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "table",
+          "placement": "right",
+          "calcs": [
+            "lastNotNull",
+            "max"
+          ],
+          "sortBy": "Max",
+          "sortDesc": true
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "id": 16,
+      "gridPos": {
+        "h": 8,
+        "w": 8,
+        "x": 8,
+        "y": 35
+      }
+    },
+    {
+      "type": "timeseries",
+      "title": "Host disk latency",
+      "description": "Average time per completed request on the host disks.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${DS_PROMETHEUS}"
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "refId": "A",
+          "expr": "(sum by (instance) (rate(node_disk_read_time_seconds_total{instance=~\"$instance\", device!~\"dm-.*|sr.*|md.*|loop.*|ram.*\"}[$__rate_interval])) / sum by (instance) (rate(node_disk_reads_completed_total{instance=~\"$instance\", device!~\"dm-.*|sr.*|md.*|loop.*|ram.*\"}[$__rate_interval]))) * on(instance) group_left(nodename) node_uname_info",
+          "editorMode": "code",
+          "range": true,
+          "legendFormat": "{{nodename}} read"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "refId": "B",
+          "expr": "(sum by (instance) (rate(node_disk_write_time_seconds_total{instance=~\"$instance\", device!~\"dm-.*|sr.*|md.*|loop.*|ram.*\"}[$__rate_interval])) / sum by (instance) (rate(node_disk_writes_completed_total{instance=~\"$instance\", device!~\"dm-.*|sr.*|md.*|loop.*|ram.*\"}[$__rate_interval]))) * on(instance) group_left(nodename) node_uname_info",
+          "editorMode": "code",
+          "range": true,
+          "legendFormat": "{{nodename}} write"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "s",
+          "custom": {
+            "lineWidth": 1,
+            "fillOpacity": 0,
+            "showPoints": "never",
+            "spanNulls": true,
+            "stacking": {
+              "mode": "none"
+            }
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "table",
+          "placement": "right",
+          "calcs": [
+            "lastNotNull",
+            "max"
+          ],
+          "sortBy": "Max",
+          "sortDesc": true
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "id": 17,
+      "gridPos": {
+        "h": 8,
+        "w": 8,
+        "x": 16,
+        "y": 35
+      }
+    },
+    {
+      "type": "timeseries",
+      "title": "Top 10 VMs by write latency",
+      "description": "Average time per write request seen by the VM.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${DS_PROMETHEUS}"
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "refId": "A",
+          "expr": "topk(10, (sum by (instance, domain) ((rate(libvirt_domain_block_stats_write_time_seconds_total{instance=~\"$instance\", domain=~\"$domain\"}[$__rate_interval]) unless (resets(libvirt_domain_block_stats_write_time_seconds_total{instance=~\"$instance\", domain=~\"$domain\"}[$__rate_interval]) > 0 or (min_over_time(libvirt_domain_block_stats_write_time_seconds_total{instance=~\"$instance\", domain=~\"$domain\"}[$__rate_interval]) == 0 and max_over_time(libvirt_domain_block_stats_write_time_seconds_total{instance=~\"$instance\", domain=~\"$domain\"}[$__rate_interval]) > 0)))) / sum by (instance, domain) ((rate(libvirt_domain_block_stats_write_requests_total{instance=~\"$instance\", domain=~\"$domain\"}[$__rate_interval]) unless (resets(libvirt_domain_block_stats_write_requests_total{instance=~\"$instance\", domain=~\"$domain\"}[$__rate_interval]) > 0 or (min_over_time(libvirt_domain_block_stats_write_requests_total{instance=~\"$instance\", domain=~\"$domain\"}[$__rate_interval]) == 0 and max_over_time(libvirt_domain_block_stats_write_requests_total{instance=~\"$instance\", domain=~\"$domain\"}[$__rate_interval]) > 0))))) * on(instance) group_left(nodename) node_uname_info)",
+          "range": true,
+          "legendFormat": "{{domain}} ({{nodename}})",
+          "editorMode": "code"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "s",
+          "custom": {
+            "lineWidth": 1,
+            "fillOpacity": 0,
+            "showPoints": "never",
+            "spanNulls": true,
+            "stacking": {
+              "mode": "none"
+            }
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "table",
+          "placement": "right",
+          "calcs": [
+            "lastNotNull",
+            "max"
+          ],
+          "sortBy": "Max",
+          "sortDesc": true
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "id": 18,
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 43
+      }
+    },
+    {
+      "type": "timeseries",
+      "title": "Top 10 VMs by IOPS (noisy neighbours)",
+      "description": "VMs issuing the most write requests. When latency rises for everyone, start here.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${DS_PROMETHEUS}"
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "refId": "A",
+          "expr": "topk(10, (sum by (instance, domain) ((rate(libvirt_domain_block_stats_write_requests_total{instance=~\"$instance\", domain=~\"$domain\"}[$__rate_interval]) unless (resets(libvirt_domain_block_stats_write_requests_total{instance=~\"$instance\", domain=~\"$domain\"}[$__rate_interval]) > 0 or (min_over_time(libvirt_domain_block_stats_write_requests_total{instance=~\"$instance\", domain=~\"$domain\"}[$__rate_interval]) == 0 and max_over_time(libvirt_domain_block_stats_write_requests_total{instance=~\"$instance\", domain=~\"$domain\"}[$__rate_interval]) > 0))))) * on(instance) group_left(nodename) node_uname_info)",
+          "range": true,
+          "legendFormat": "{{domain}} ({{nodename}})",
+          "editorMode": "code"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "iops",
+          "custom": {
+            "lineWidth": 1,
+            "fillOpacity": 0,
+            "showPoints": "never",
+            "spanNulls": true,
+            "stacking": {
+              "mode": "none"
+            }
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "table",
+          "placement": "right",
+          "calcs": [
+            "lastNotNull",
+            "max"
+          ],
+          "sortBy": "Max",
+          "sortDesc": true
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "id": 19,
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 43
+      }
+    },
+    {
+      "id": 20,
+      "type": "row",
+      "title": "Network",
+      "collapsed": false,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 51
+      },
+      "panels": []
+    },
+    {
+      "type": "timeseries",
+      "title": "Host interface drops",
+      "description": "Packets dropped per second (receive + transmit) per host interface.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${DS_PROMETHEUS}"
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "refId": "A",
+          "expr": "sum by (instance, device) (rate(node_network_receive_drop_total{instance=~\"$instance\", device!~\"lo|vnet.*|veth.*|tap.*|virbr.*|docker.*|br-.*|ovs.*|genev_sys.*|vxlan.*\"}[$__rate_interval]) + rate(node_network_transmit_drop_total{instance=~\"$instance\", device!~\"lo|vnet.*|veth.*|tap.*|virbr.*|docker.*|br-.*|ovs.*|genev_sys.*|vxlan.*\"}[$__rate_interval])) * on(instance) group_left(nodename) node_uname_info",
+          "editorMode": "code",
+          "range": true,
+          "legendFormat": "{{nodename}} {{device}}"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "pps",
+          "custom": {
+            "lineWidth": 1,
+            "fillOpacity": 0,
+            "showPoints": "never",
+            "spanNulls": true,
+            "stacking": {
+              "mode": "none"
+            }
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "table",
+          "placement": "right",
+          "calcs": [
+            "lastNotNull",
+            "max"
+          ],
+          "sortBy": "Max",
+          "sortDesc": true
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "id": 21,
+      "gridPos": {
+        "h": 8,
+        "w": 8,
+        "x": 0,
+        "y": 52
+      }
+    },
+    {
+      "type": "timeseries",
+      "title": "Host interface errors",
+      "description": "Receive and transmit errors per second. Should stay at zero.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${DS_PROMETHEUS}"
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "refId": "A",
+          "expr": "sum by (instance, device) (rate(node_network_receive_errs_total{instance=~\"$instance\", device!~\"lo|vnet.*|veth.*|tap.*|virbr.*|docker.*|br-.*|ovs.*|genev_sys.*|vxlan.*\"}[$__rate_interval]) + rate(node_network_transmit_errs_total{instance=~\"$instance\", device!~\"lo|vnet.*|veth.*|tap.*|virbr.*|docker.*|br-.*|ovs.*|genev_sys.*|vxlan.*\"}[$__rate_interval])) * on(instance) group_left(nodename) node_uname_info",
+          "editorMode": "code",
+          "range": true,
+          "legendFormat": "{{nodename}} {{device}}"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "pps",
+          "custom": {
+            "lineWidth": 1,
+            "fillOpacity": 0,
+            "showPoints": "never",
+            "spanNulls": true,
+            "stacking": {
+              "mode": "none"
+            }
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "table",
+          "placement": "right",
+          "calcs": [
+            "lastNotNull",
+            "max"
+          ],
+          "sortBy": "Max",
+          "sortDesc": true
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "id": 22,
+      "gridPos": {
+        "h": 8,
+        "w": 8,
+        "x": 8,
+        "y": 52
+      }
+    },
+    {
+      "type": "timeseries",
+      "title": "Top 10 VMs by dropped packets",
+      "description": "Drops on the VM tap interfaces.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${DS_PROMETHEUS}"
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "refId": "A",
+          "expr": "topk(10, (sum by (instance, domain) ((rate(libvirt_domain_interface_stats_receive_drops_total{instance=~\"$instance\", domain=~\"$domain\"}[$__rate_interval]) unless (resets(libvirt_domain_interface_stats_receive_drops_total{instance=~\"$instance\", domain=~\"$domain\"}[$__rate_interval]) > 0 or (min_over_time(libvirt_domain_interface_stats_receive_drops_total{instance=~\"$instance\", domain=~\"$domain\"}[$__rate_interval]) == 0 and max_over_time(libvirt_domain_interface_stats_receive_drops_total{instance=~\"$instance\", domain=~\"$domain\"}[$__rate_interval]) > 0))) + (rate(libvirt_domain_interface_stats_transmit_drops_total{instance=~\"$instance\", domain=~\"$domain\"}[$__rate_interval]) unless (resets(libvirt_domain_interface_stats_transmit_drops_total{instance=~\"$instance\", domain=~\"$domain\"}[$__rate_interval]) > 0 or (min_over_time(libvirt_domain_interface_stats_transmit_drops_total{instance=~\"$instance\", domain=~\"$domain\"}[$__rate_interval]) == 0 and max_over_time(libvirt_domain_interface_stats_transmit_drops_total{instance=~\"$instance\", domain=~\"$domain\"}[$__rate_interval]) > 0))))) * on(instance) group_left(nodename) node_uname_info)",
+          "range": true,
+          "legendFormat": "{{domain}} ({{nodename}})",
+          "editorMode": "code"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "pps",
+          "custom": {
+            "lineWidth": 1,
+            "fillOpacity": 0,
+            "showPoints": "never",
+            "spanNulls": true,
+            "stacking": {
+              "mode": "none"
+            }
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "table",
+          "placement": "right",
+          "calcs": [
+            "lastNotNull",
+            "max"
+          ],
+          "sortBy": "Max",
+          "sortDesc": true
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "id": 23,
+      "gridPos": {
+        "h": 8,
+        "w": 8,
+        "x": 16,
+        "y": 52
+      }
+    },
+    {
+      "type": "timeseries",
+      "title": "Top 10 VMs by network receive",
+      "description": "",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${DS_PROMETHEUS}"
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "refId": "A",
+          "expr": "topk(10, (sum by (instance, domain) ((rate(libvirt_domain_interface_stats_receive_bytes_total{instance=~\"$instance\", domain=~\"$domain\"}[$__rate_interval]) unless (resets(libvirt_domain_interface_stats_receive_bytes_total{instance=~\"$instance\", domain=~\"$domain\"}[$__rate_interval]) > 0 or (min_over_time(libvirt_domain_interface_stats_receive_bytes_total{instance=~\"$instance\", domain=~\"$domain\"}[$__rate_interval]) == 0 and max_over_time(libvirt_domain_interface_stats_receive_bytes_total{instance=~\"$instance\", domain=~\"$domain\"}[$__rate_interval]) > 0))))) * on(instance) group_left(nodename) node_uname_info)",
+          "range": true,
+          "legendFormat": "{{domain}} ({{nodename}})",
+          "editorMode": "code"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "Bps",
+          "custom": {
+            "lineWidth": 1,
+            "fillOpacity": 0,
+            "showPoints": "never",
+            "spanNulls": true,
+            "stacking": {
+              "mode": "none"
+            }
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "table",
+          "placement": "right",
+          "calcs": [
+            "lastNotNull",
+            "max"
+          ],
+          "sortBy": "Max",
+          "sortDesc": true
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "id": 24,
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 60
+      }
+    },
+    {
+      "type": "timeseries",
+      "title": "Top 10 VMs by network transmit",
+      "description": "",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${DS_PROMETHEUS}"
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "refId": "A",
+          "expr": "topk(10, (sum by (instance, domain) ((rate(libvirt_domain_interface_stats_transmit_bytes_total{instance=~\"$instance\", domain=~\"$domain\"}[$__rate_interval]) unless (resets(libvirt_domain_interface_stats_transmit_bytes_total{instance=~\"$instance\", domain=~\"$domain\"}[$__rate_interval]) > 0 or (min_over_time(libvirt_domain_interface_stats_transmit_bytes_total{instance=~\"$instance\", domain=~\"$domain\"}[$__rate_interval]) == 0 and max_over_time(libvirt_domain_interface_stats_transmit_bytes_total{instance=~\"$instance\", domain=~\"$domain\"}[$__rate_interval]) > 0))))) * on(instance) group_left(nodename) node_uname_info)",
+          "range": true,
+          "legendFormat": "{{domain}} ({{nodename}})",
+          "editorMode": "code"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "Bps",
+          "custom": {
+            "lineWidth": 1,
+            "fillOpacity": 0,
+            "showPoints": "never",
+            "spanNulls": true,
+            "stacking": {
+              "mode": "none"
+            }
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "table",
+          "placement": "right",
+          "calcs": [
+            "lastNotNull",
+            "max"
+          ],
+          "sortBy": "Max",
+          "sortDesc": true
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "id": 25,
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 60
+      }
+    }
+  ]
+}

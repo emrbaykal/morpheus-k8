@@ -1,0 +1,728 @@
+{
+  "__inputs": [
+    {
+      "name": "DS_PROMETHEUS",
+      "label": "Prometheus (HVM host exporters)",
+      "description": "Prometheus that scrapes node_exporter and prometheus-libvirt-exporter on the HVM hosts",
+      "type": "datasource",
+      "pluginId": "prometheus",
+      "pluginName": "Prometheus"
+    }
+  ],
+  "__requires": [
+    {
+      "type": "datasource",
+      "id": "prometheus",
+      "name": "Prometheus",
+      "version": "1.0.0"
+    }
+  ],
+  "uid": "hvm-capacity",
+  "title": "HVM Capacity",
+  "description": "Allocation, overcommit and 30 day trends of the HVM hosts",
+  "tags": [
+    "morpheus-hvm"
+  ],
+  "editable": true,
+  "schemaVersion": 39,
+  "time": {
+    "from": "now-6h",
+    "to": "now"
+  },
+  "refresh": "1m",
+  "timezone": "browser",
+  "links": [
+    {
+      "type": "dashboards",
+      "tags": [
+        "morpheus-hvm"
+      ],
+      "asDropdown": true,
+      "title": "HVM dashboards",
+      "includeVars": true,
+      "keepTime": true
+    },
+    {
+      "type": "dashboards",
+      "tags": [
+        "morpheus"
+      ],
+      "asDropdown": true,
+      "title": "Morpheus dashboards"
+    }
+  ],
+  "templating": {
+    "list": [
+      {
+        "name": "host",
+        "label": "Host",
+        "type": "query",
+        "datasource": {
+          "type": "prometheus",
+          "uid": "${DS_PROMETHEUS}"
+        },
+        "query": {
+          "qryType": 1,
+          "query": "label_values(node_uname_info, nodename)",
+          "refId": "host"
+        },
+        "definition": "label_values(node_uname_info, nodename)",
+        "refresh": 2,
+        "multi": true,
+        "includeAll": true,
+        "allValue": ".*",
+        "sort": 1,
+        "current": {
+          "text": [
+            "All"
+          ],
+          "value": [
+            "$__all"
+          ]
+        },
+        "options": []
+      },
+      {
+        "name": "instance",
+        "label": "Instance",
+        "type": "query",
+        "datasource": {
+          "type": "prometheus",
+          "uid": "${DS_PROMETHEUS}"
+        },
+        "hide": 2,
+        "query": {
+          "qryType": 1,
+          "query": "label_values(node_uname_info{nodename=~\"$host\"}, instance)",
+          "refId": "instance"
+        },
+        "definition": "label_values(node_uname_info{nodename=~\"$host\"}, instance)",
+        "refresh": 2,
+        "multi": true,
+        "includeAll": true,
+        "allValue": ".*",
+        "current": {
+          "text": [
+            "All"
+          ],
+          "value": [
+            "$__all"
+          ]
+        },
+        "options": []
+      },
+      {
+        "name": "domain",
+        "type": "constant",
+        "hide": 2,
+        "query": ".*"
+      }
+    ]
+  },
+  "panels": [
+    {
+      "id": 2,
+      "type": "row",
+      "title": "Allocation",
+      "collapsed": false,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 0
+      },
+      "panels": []
+    },
+    {
+      "type": "table",
+      "title": "Capacity per host",
+      "description": "Allocated values count running VMs only. vCPU : core is allocated vCPUs per logical CPU; memory ratio is memory given to running VMs as a share of host memory. Idle cores is logical CPUs times the idle share.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${DS_PROMETHEUS}"
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "refId": "A",
+          "expr": "max by (nodename) ((count by (instance) (node_cpu_seconds_total{mode=\"idle\", instance=~\"$instance\"})) * on(instance) group_left(nodename) node_uname_info)",
+          "editorMode": "code",
+          "instant": true,
+          "range": false,
+          "format": "table"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "refId": "B",
+          "expr": "max by (nodename) ((sum by (instance) (libvirt_domain_info_virtual_cpus{instance=~\"$instance\"} and on (instance, domain) libvirt_domain_info_state{instance=~\"$instance\"} == 1)) * on(instance) group_left(nodename) node_uname_info)",
+          "editorMode": "code",
+          "instant": true,
+          "range": false,
+          "format": "table"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "refId": "C",
+          "expr": "max by (nodename) ((sum by (instance) (libvirt_domain_info_virtual_cpus{instance=~\"$instance\"} and on (instance, domain) libvirt_domain_info_state{instance=~\"$instance\"} == 1) / count by (instance) (node_cpu_seconds_total{mode=\"idle\", instance=~\"$instance\"})) * on(instance) group_left(nodename) node_uname_info)",
+          "editorMode": "code",
+          "instant": true,
+          "range": false,
+          "format": "table"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "refId": "D",
+          "expr": "max by (nodename) ((count by (instance) (node_cpu_seconds_total{mode=\"idle\", instance=~\"$instance\"}) * avg by (instance) (rate(node_cpu_seconds_total{mode=\"idle\", instance=~\"$instance\"}[$__rate_interval]))) * on(instance) group_left(nodename) node_uname_info)",
+          "editorMode": "code",
+          "instant": true,
+          "range": false,
+          "format": "table"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "refId": "E",
+          "expr": "max by (nodename) (node_memory_MemTotal_bytes{instance=~\"$instance\"} * on(instance) group_left(nodename) node_uname_info)",
+          "editorMode": "code",
+          "instant": true,
+          "range": false,
+          "format": "table"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "refId": "F",
+          "expr": "max by (nodename) ((sum by (instance) (libvirt_domain_info_maximum_memory_bytes{instance=~\"$instance\"} and on (instance, domain) libvirt_domain_info_state{instance=~\"$instance\"} == 1)) * on(instance) group_left(nodename) node_uname_info)",
+          "editorMode": "code",
+          "instant": true,
+          "range": false,
+          "format": "table"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "refId": "G",
+          "expr": "max by (nodename) ((sum by (instance) (libvirt_domain_info_maximum_memory_bytes{instance=~\"$instance\"} and on (instance, domain) libvirt_domain_info_state{instance=~\"$instance\"} == 1) / on (instance) node_memory_MemTotal_bytes{instance=~\"$instance\"}) * on(instance) group_left(nodename) node_uname_info)",
+          "editorMode": "code",
+          "instant": true,
+          "range": false,
+          "format": "table"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "refId": "H",
+          "expr": "max by (nodename) (node_memory_MemAvailable_bytes{instance=~\"$instance\"} * on(instance) group_left(nodename) node_uname_info)",
+          "editorMode": "code",
+          "instant": true,
+          "range": false,
+          "format": "table"
+        }
+      ],
+      "transformations": [
+        {
+          "id": "merge",
+          "options": {}
+        },
+        {
+          "id": "organize",
+          "options": {
+            "excludeByName": {
+              "Time": true
+            },
+            "renameByName": {
+              "Value #A": "Cores",
+              "Value #B": "vCPU allocated",
+              "Value #C": "vCPU : core",
+              "Value #D": "Idle cores",
+              "Value #E": "Memory",
+              "Value #F": "Memory allocated",
+              "Value #G": "Memory ratio",
+              "Value #H": "Memory available",
+              "nodename": "Host"
+            },
+            "indexByName": {
+              "Host": 0,
+              "Cores": 1,
+              "vCPU allocated": 2,
+              "vCPU : core": 3,
+              "Idle cores": 4,
+              "Memory": 5,
+              "Memory allocated": 6,
+              "Memory ratio": 7,
+              "Memory available": 8
+            }
+          }
+        },
+        {
+          "id": "sortBy",
+          "options": {
+            "sort": [
+              {
+                "field": "Host"
+              }
+            ]
+          }
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "decimals": 1
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Cores"
+            },
+            "properties": [
+              {
+                "id": "unit",
+                "value": "none"
+              },
+              {
+                "id": "decimals",
+                "value": 0
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "vCPU allocated"
+            },
+            "properties": [
+              {
+                "id": "unit",
+                "value": "none"
+              },
+              {
+                "id": "decimals",
+                "value": 0
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "vCPU : core"
+            },
+            "properties": [
+              {
+                "id": "unit",
+                "value": "none"
+              },
+              {
+                "id": "decimals",
+                "value": 2
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Idle cores"
+            },
+            "properties": [
+              {
+                "id": "unit",
+                "value": "none"
+              },
+              {
+                "id": "decimals",
+                "value": 0
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Memory"
+            },
+            "properties": [
+              {
+                "id": "unit",
+                "value": "bytes"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Memory allocated"
+            },
+            "properties": [
+              {
+                "id": "unit",
+                "value": "bytes"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Memory ratio"
+            },
+            "properties": [
+              {
+                "id": "unit",
+                "value": "percentunit"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Memory available"
+            },
+            "properties": [
+              {
+                "id": "unit",
+                "value": "bytes"
+              }
+            ]
+          }
+        ]
+      },
+      "options": {
+        "showHeader": true,
+        "cellHeight": "sm"
+      },
+      "id": 3,
+      "gridPos": {
+        "h": 7,
+        "w": 24,
+        "x": 0,
+        "y": 1
+      }
+    },
+    {
+      "type": "bargauge",
+      "title": "vCPU : core ratio",
+      "description": "Allocated vCPUs of running VMs per logical CPU of the host.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${DS_PROMETHEUS}"
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "refId": "A",
+          "expr": "topk(15, (sum by (instance) (libvirt_domain_info_virtual_cpus{instance=~\"$instance\"} and on (instance, domain) libvirt_domain_info_state{instance=~\"$instance\"} == 1) / count by (instance) (node_cpu_seconds_total{mode=\"idle\", instance=~\"$instance\"})) * on(instance) group_left(nodename) node_uname_info)",
+          "instant": true,
+          "range": false,
+          "legendFormat": "{{nodename}}",
+          "editorMode": "code"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "none",
+          "min": 0,
+          "decimals": 2
+        },
+        "overrides": []
+      },
+      "options": {
+        "orientation": "horizontal",
+        "displayMode": "basic",
+        "valueMode": "color",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "values": false
+        },
+        "showUnfilled": true,
+        "minVizHeight": 10,
+        "maxVizHeight": 22
+      },
+      "id": 4,
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 8
+      }
+    },
+    {
+      "type": "bargauge",
+      "title": "Memory allocated / host memory",
+      "description": "Memory given to running VMs as a share of host memory.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${DS_PROMETHEUS}"
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "refId": "A",
+          "expr": "topk(15, (sum by (instance) (libvirt_domain_info_maximum_memory_bytes{instance=~\"$instance\"} and on (instance, domain) libvirt_domain_info_state{instance=~\"$instance\"} == 1) / on (instance) node_memory_MemTotal_bytes{instance=~\"$instance\"}) * on(instance) group_left(nodename) node_uname_info)",
+          "instant": true,
+          "range": false,
+          "legendFormat": "{{nodename}}",
+          "editorMode": "code"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percentunit",
+          "min": 0,
+          "decimals": 1,
+          "max": 1.5
+        },
+        "overrides": []
+      },
+      "options": {
+        "orientation": "horizontal",
+        "displayMode": "basic",
+        "valueMode": "color",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "values": false
+        },
+        "showUnfilled": true,
+        "minVizHeight": 10,
+        "maxVizHeight": 22
+      },
+      "id": 5,
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 8
+      }
+    },
+    {
+      "id": 6,
+      "type": "row",
+      "title": "Trends",
+      "collapsed": false,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 16
+      },
+      "panels": []
+    },
+    {
+      "type": "timeseries",
+      "title": "Host CPU % (30 days)",
+      "description": "Last 30 days, one point per 10 minutes. How far back it goes depends on the Prometheus retention.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${DS_PROMETHEUS}"
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "refId": "A",
+          "expr": "100 * (1 - avg by (instance) (rate(node_cpu_seconds_total{mode=\"idle\", instance=~\"$instance\"}[$__rate_interval]))) * on(instance) group_left(nodename) node_uname_info",
+          "editorMode": "code",
+          "range": true,
+          "legendFormat": "{{nodename}}"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percent",
+          "custom": {
+            "lineWidth": 1,
+            "fillOpacity": 0,
+            "showPoints": "never",
+            "spanNulls": true,
+            "stacking": {
+              "mode": "none"
+            }
+          },
+          "min": 0,
+          "max": 100
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "table",
+          "placement": "right",
+          "calcs": [
+            "lastNotNull",
+            "max"
+          ],
+          "sortBy": "Max",
+          "sortDesc": true
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "timeFrom": "30d",
+      "interval": "10m",
+      "id": 7,
+      "gridPos": {
+        "h": 8,
+        "w": 8,
+        "x": 0,
+        "y": 17
+      }
+    },
+    {
+      "type": "timeseries",
+      "title": "Host memory used % (30 days)",
+      "description": "Last 30 days, one point per 10 minutes. How far back it goes depends on the Prometheus retention.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${DS_PROMETHEUS}"
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "refId": "A",
+          "expr": "100 * (1 - node_memory_MemAvailable_bytes{instance=~\"$instance\"} / node_memory_MemTotal_bytes{instance=~\"$instance\"}) * on(instance) group_left(nodename) node_uname_info",
+          "editorMode": "code",
+          "range": true,
+          "legendFormat": "{{nodename}}"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percent",
+          "custom": {
+            "lineWidth": 1,
+            "fillOpacity": 0,
+            "showPoints": "never",
+            "spanNulls": true,
+            "stacking": {
+              "mode": "none"
+            }
+          },
+          "min": 0,
+          "max": 100
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "table",
+          "placement": "right",
+          "calcs": [
+            "lastNotNull",
+            "max"
+          ],
+          "sortBy": "Max",
+          "sortDesc": true
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "timeFrom": "30d",
+      "interval": "10m",
+      "id": 8,
+      "gridPos": {
+        "h": 8,
+        "w": 8,
+        "x": 8,
+        "y": 17
+      }
+    },
+    {
+      "type": "timeseries",
+      "title": "Running VMs (30 days)",
+      "description": "Last 30 days, one point per 10 minutes. How far back it goes depends on the Prometheus retention.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${DS_PROMETHEUS}"
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "refId": "A",
+          "expr": "(count by (instance) (libvirt_domain_info_state{instance=~\"$instance\"} == 1) or on (instance) 0 * count by (instance) (node_uname_info{instance=~\"$instance\"})) * on(instance) group_left(nodename) node_uname_info",
+          "editorMode": "code",
+          "range": true,
+          "legendFormat": "{{nodename}}"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "none",
+          "custom": {
+            "lineWidth": 1,
+            "fillOpacity": 0,
+            "showPoints": "never",
+            "spanNulls": true,
+            "stacking": {
+              "mode": "none"
+            }
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "table",
+          "placement": "right",
+          "calcs": [
+            "lastNotNull",
+            "max"
+          ],
+          "sortBy": "Max",
+          "sortDesc": true
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "timeFrom": "30d",
+      "interval": "10m",
+      "id": 9,
+      "gridPos": {
+        "h": 8,
+        "w": 8,
+        "x": 16,
+        "y": 17
+      }
+    }
+  ]
+}
