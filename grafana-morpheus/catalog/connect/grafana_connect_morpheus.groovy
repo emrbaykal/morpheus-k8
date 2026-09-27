@@ -12,6 +12,8 @@ import java.security.cert.X509Certificate
 // grafana_connect_morpheus.groovy  (v1.8.0 - dashboards from the published JSON files)
 // fix:    data sources are updated through /api/datasources/uid/<uid>; Grafana 13 answers
 //         404 on the numeric-id path, so a second run failed on an existing data source.
+//         Data source names in URL paths encode a space as %20 (was '+', so a name with
+//         spaces was not found and a re-run skipped the HVM dashboards).
 // v1.8.0: the dashboards are no longer built in this script. The task downloads the
 //         published JSON files (Dashboard Source URL, default the morpheus-k8
 //         repository on GitHub) and imports them with Grafana's import API, so the
@@ -207,6 +209,9 @@ def grafanaHeaders = [
     "Authorization": "Basic " + ("admin:" + grafanaPassword).bytes.encodeBase64().toString(),
     "Content-Type" : "application/json"
 ]
+// Data source names in a URL path: URLEncoder writes a space as '+', which Grafana reads
+// literally in a path, so "Prometheus HVM Hosts" was not found and a re-run failed.
+def pathName = { String n -> URLEncoder.encode(n, "UTF-8").replace("+", "%20") }
 def grafana = { String method, String path, payload ->
     http(method, grafanaUrl + path, grafanaHeaders, payload == null ? null : JsonOutput.toJson(payload))
 }
@@ -261,7 +266,7 @@ def dsBody = [
     jsonData      : [auth_method: "bearerToken", allowedHosts: [morpheusBase], tlsSkipVerify: true],
     secureJsonData: [bearerToken: readerToken]
 ]
-def (gCode, gJson, gBody) = grafana("GET", "/api/datasources/name/" + URLEncoder.encode(DS_NAME, "UTF-8"), null)
+def (gCode, gJson, gBody) = grafana("GET", "/api/datasources/name/" + pathName(DS_NAME), null)
 def dsUid
 def dsAction
 if (gCode == 200 && gJson?.uid) {
@@ -313,7 +318,7 @@ imported << importDashboard(OVERVIEW_FILE, [DS_MORPHEUS: [type: PLUGIN_ID, uid: 
 // Prometheus data source: create or update, keep it only if it answers.
 def upsertPrometheus = { String name, String url ->
     def body = [name: name, type: "prometheus", access: "proxy", url: url, jsonData: [timeInterval: "30s"]]
-    def (gc, gj, gb) = grafana("GET", "/api/datasources/name/" + URLEncoder.encode(name, "UTF-8"), null)
+    def (gc, gj, gb) = grafana("GET", "/api/datasources/name/" + pathName(name), null)
     def uid = null
     if (gc == 200 && gj?.uid) {
         body.uid = gj.uid
@@ -331,7 +336,7 @@ def upsertPrometheus = { String name, String url ->
 }
 // Existing data source of that name, if it answers (used when the URL field is empty).
 def existingPrometheus = { String name ->
-    def (gc, gj, gb) = grafana("GET", "/api/datasources/name/" + URLEncoder.encode(name, "UTF-8"), null)
+    def (gc, gj, gb) = grafana("GET", "/api/datasources/name/" + pathName(name), null)
     if (gc != 200 || !gj?.uid) { return null }
     def (hc, hj, hb) = grafana("GET", "/api/datasources/uid/" + gj.uid + "/health", null)
     return (hc == 200 && hj?.status?.toString() == "OK") ? gj.uid : null
@@ -339,7 +344,7 @@ def existingPrometheus = { String name ->
 
 // --- 6. Prometheus of the Kubernetes cluster (optional) ------------------------------
 // Remove the data source name used before v1.5.0.
-def (ogCode, ogJson, ogBody) = grafana("GET", "/api/datasources/name/" + URLEncoder.encode(OLD_PROM, "UTF-8"), null)
+def (ogCode, ogJson, ogBody) = grafana("GET", "/api/datasources/name/" + pathName(OLD_PROM), null)
 if (ogCode == 200 && ogJson?.uid) { grafana("DELETE", "/api/datasources/uid/" + ogJson.uid, null) }
 def promUrl = opts.prometheusUrl?.toString()?.trim()?.replaceAll('/+$', '')
 def promUid = promUrl ? upsertPrometheus(PROM_NAME, promUrl) : existingPrometheus(PROM_NAME)
@@ -348,7 +353,7 @@ if (promUid) {
     imported << importDashboard(PODS_FILE, [DS_PROMETHEUS: [type: "prometheus", uid: promUid]])
     promNote = "data source '${PROM_NAME}' ready"
 } else {
-    promNote = promUrl ? "Prometheus at ${promUrl} did not answer - pods dashboard skipped" : "no Prometheus URL - pods dashboard skipped"
+    promNote = promUrl ? "data source '${PROM_NAME}' (${promUrl}) could not be saved or did not answer - pods dashboard skipped" : "no Prometheus URL - pods dashboard skipped"
 }
 
 // --- 7. Prometheus of the HVM hosts (optional) ---------------------------------------
@@ -361,7 +366,7 @@ if (hostPromUid) {
     HVM_FILES.each { f -> imported << importDashboard(f, [DS_PROMETHEUS: [type: "prometheus", uid: hostPromUid]]) }
     hostNote = "data source '${HOST_PROM_NAME}' ready, HVM dashboards imported"
 } else {
-    hostNote = hostPromUrl ? "HVM hosts Prometheus at ${hostPromUrl} did not answer - HVM dashboards skipped" : "no HVM hosts Prometheus URL - HVM dashboards skipped"
+    hostNote = hostPromUrl ? "data source '${HOST_PROM_NAME}' (${hostPromUrl}) could not be saved or did not answer - HVM dashboards skipped" : "no HVM hosts Prometheus URL - HVM dashboards skipped"
 }
 
 println "Grafana ${grafanaUrl}: plugin ${pluginAction}, data source '${DS_NAME}' ${dsAction}; ${promNote}; ${hostNote}; " +
