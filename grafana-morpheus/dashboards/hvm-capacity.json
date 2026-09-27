@@ -62,6 +62,28 @@
   "templating": {
     "list": [
       {
+        "name": "source",
+        "label": "Environment",
+        "type": "query",
+        "datasource": {
+          "type": "prometheus",
+          "uid": "${DS_PROMETHEUS}"
+        },
+        "description": "Value of the 'source' label on the HVM host scrape jobs",
+        "query": {
+          "qryType": 1,
+          "query": "label_values(node_uname_info, source)",
+          "refId": "source"
+        },
+        "definition": "label_values(node_uname_info, source)",
+        "refresh": 1,
+        "multi": false,
+        "includeAll": false,
+        "sort": 1,
+        "current": {},
+        "options": []
+      },
+      {
         "name": "host",
         "label": "Host",
         "type": "query",
@@ -71,10 +93,10 @@
         },
         "query": {
           "qryType": 1,
-          "query": "label_values(node_uname_info, nodename)",
+          "query": "label_values(node_uname_info{source=\"$source\"}, nodename)",
           "refId": "host"
         },
-        "definition": "label_values(node_uname_info, nodename)",
+        "definition": "label_values(node_uname_info{source=\"$source\"}, nodename)",
         "refresh": 2,
         "multi": true,
         "includeAll": true,
@@ -101,10 +123,10 @@
         "hide": 2,
         "query": {
           "qryType": 1,
-          "query": "label_values(node_uname_info{nodename=~\"$host\"}, instance)",
+          "query": "label_values(node_uname_info{source=\"$source\", nodename=~\"$host\"}, instance)",
           "refId": "instance"
         },
-        "definition": "label_values(node_uname_info{nodename=~\"$host\"}, instance)",
+        "definition": "label_values(node_uname_info{source=\"$source\", nodename=~\"$host\"}, instance)",
         "refresh": 2,
         "multi": true,
         "includeAll": true,
@@ -156,7 +178,7 @@
             "uid": "${DS_PROMETHEUS}"
           },
           "refId": "A",
-          "expr": "max by (nodename) ((count by (instance) (node_cpu_seconds_total{mode=\"idle\", instance=~\"$instance\"})) * on(instance) group_left(nodename) node_uname_info)",
+          "expr": "max by (nodename) ((count by (instance) (node_cpu_seconds_total{mode=\"idle\", source=\"$source\", instance=~\"$instance\"})) * on(instance) group_left(nodename) node_uname_info{source=\"$source\"})",
           "editorMode": "code",
           "instant": true,
           "range": false,
@@ -168,7 +190,7 @@
             "uid": "${DS_PROMETHEUS}"
           },
           "refId": "B",
-          "expr": "max by (nodename) ((sum by (instance) (libvirt_domain_info_virtual_cpus{instance=~\"$instance\"} and on (instance, domain) libvirt_domain_info_state{instance=~\"$instance\"} == 1)) * on(instance) group_left(nodename) node_uname_info)",
+          "expr": "max by (nodename) ((sum by (instance) (libvirt_domain_info_virtual_cpus{source=\"$source\", instance=~\"$instance\"} and on (instance, domain) libvirt_domain_info_state{source=\"$source\", instance=~\"$instance\"} == 1)) * on(instance) group_left(nodename) node_uname_info{source=\"$source\"})",
           "editorMode": "code",
           "instant": true,
           "range": false,
@@ -180,7 +202,7 @@
             "uid": "${DS_PROMETHEUS}"
           },
           "refId": "C",
-          "expr": "max by (nodename) ((sum by (instance) (libvirt_domain_info_virtual_cpus{instance=~\"$instance\"} and on (instance, domain) libvirt_domain_info_state{instance=~\"$instance\"} == 1) / count by (instance) (node_cpu_seconds_total{mode=\"idle\", instance=~\"$instance\"})) * on(instance) group_left(nodename) node_uname_info)",
+          "expr": "max by (nodename) ((sum by (instance) (libvirt_domain_info_virtual_cpus{source=\"$source\", instance=~\"$instance\"} and on (instance, domain) libvirt_domain_info_state{source=\"$source\", instance=~\"$instance\"} == 1) / count by (instance) (node_cpu_seconds_total{mode=\"idle\", source=\"$source\", instance=~\"$instance\"})) * on(instance) group_left(nodename) node_uname_info{source=\"$source\"})",
           "editorMode": "code",
           "instant": true,
           "range": false,
@@ -192,7 +214,7 @@
             "uid": "${DS_PROMETHEUS}"
           },
           "refId": "D",
-          "expr": "max by (nodename) ((count by (instance) (node_cpu_seconds_total{mode=\"idle\", instance=~\"$instance\"}) * avg by (instance) (rate(node_cpu_seconds_total{mode=\"idle\", instance=~\"$instance\"}[$__rate_interval]))) * on(instance) group_left(nodename) node_uname_info)",
+          "expr": "max by (nodename) ((count by (instance) (node_cpu_seconds_total{mode=\"idle\", source=\"$source\", instance=~\"$instance\"}) * avg by (instance) (rate(node_cpu_seconds_total{mode=\"idle\", source=\"$source\", instance=~\"$instance\"}[$__rate_interval]))) * on(instance) group_left(nodename) node_uname_info{source=\"$source\"})",
           "editorMode": "code",
           "instant": true,
           "range": false,
@@ -204,7 +226,7 @@
             "uid": "${DS_PROMETHEUS}"
           },
           "refId": "E",
-          "expr": "max by (nodename) (node_memory_MemTotal_bytes{instance=~\"$instance\"} * on(instance) group_left(nodename) node_uname_info)",
+          "expr": "max by (nodename) (node_memory_MemTotal_bytes{source=\"$source\", instance=~\"$instance\"} * on(instance) group_left(nodename) node_uname_info{source=\"$source\"})",
           "editorMode": "code",
           "instant": true,
           "range": false,
@@ -216,7 +238,7 @@
             "uid": "${DS_PROMETHEUS}"
           },
           "refId": "F",
-          "expr": "max by (nodename) ((sum by (instance) (libvirt_domain_info_maximum_memory_bytes{instance=~\"$instance\"} and on (instance, domain) libvirt_domain_info_state{instance=~\"$instance\"} == 1)) * on(instance) group_left(nodename) node_uname_info)",
+          "expr": "max by (nodename) ((sum by (instance) (libvirt_domain_info_maximum_memory_bytes{source=\"$source\", instance=~\"$instance\"} and on (instance, domain) libvirt_domain_info_state{source=\"$source\", instance=~\"$instance\"} == 1)) * on(instance) group_left(nodename) node_uname_info{source=\"$source\"})",
           "editorMode": "code",
           "instant": true,
           "range": false,
@@ -228,7 +250,7 @@
             "uid": "${DS_PROMETHEUS}"
           },
           "refId": "G",
-          "expr": "max by (nodename) ((sum by (instance) (libvirt_domain_info_maximum_memory_bytes{instance=~\"$instance\"} and on (instance, domain) libvirt_domain_info_state{instance=~\"$instance\"} == 1) / on (instance) node_memory_MemTotal_bytes{instance=~\"$instance\"}) * on(instance) group_left(nodename) node_uname_info)",
+          "expr": "max by (nodename) ((sum by (instance) (libvirt_domain_info_maximum_memory_bytes{source=\"$source\", instance=~\"$instance\"} and on (instance, domain) libvirt_domain_info_state{source=\"$source\", instance=~\"$instance\"} == 1) / on (instance) node_memory_MemTotal_bytes{source=\"$source\", instance=~\"$instance\"}) * on(instance) group_left(nodename) node_uname_info{source=\"$source\"})",
           "editorMode": "code",
           "instant": true,
           "range": false,
@@ -240,7 +262,7 @@
             "uid": "${DS_PROMETHEUS}"
           },
           "refId": "H",
-          "expr": "max by (nodename) (node_memory_MemAvailable_bytes{instance=~\"$instance\"} * on(instance) group_left(nodename) node_uname_info)",
+          "expr": "max by (nodename) (node_memory_MemAvailable_bytes{source=\"$source\", instance=~\"$instance\"} * on(instance) group_left(nodename) node_uname_info{source=\"$source\"})",
           "editorMode": "code",
           "instant": true,
           "range": false,
@@ -439,7 +461,7 @@
             "uid": "${DS_PROMETHEUS}"
           },
           "refId": "A",
-          "expr": "topk(15, (sum by (instance) (libvirt_domain_info_virtual_cpus{instance=~\"$instance\"} and on (instance, domain) libvirt_domain_info_state{instance=~\"$instance\"} == 1) / count by (instance) (node_cpu_seconds_total{mode=\"idle\", instance=~\"$instance\"})) * on(instance) group_left(nodename) node_uname_info)",
+          "expr": "topk(15, (sum by (instance) (libvirt_domain_info_virtual_cpus{source=\"$source\", instance=~\"$instance\"} and on (instance, domain) libvirt_domain_info_state{source=\"$source\", instance=~\"$instance\"} == 1) / count by (instance) (node_cpu_seconds_total{mode=\"idle\", source=\"$source\", instance=~\"$instance\"})) * on(instance) group_left(nodename) node_uname_info{source=\"$source\"})",
           "instant": true,
           "range": false,
           "legendFormat": "{{nodename}}",
@@ -491,7 +513,7 @@
             "uid": "${DS_PROMETHEUS}"
           },
           "refId": "A",
-          "expr": "topk(15, (sum by (instance) (libvirt_domain_info_maximum_memory_bytes{instance=~\"$instance\"} and on (instance, domain) libvirt_domain_info_state{instance=~\"$instance\"} == 1) / on (instance) node_memory_MemTotal_bytes{instance=~\"$instance\"}) * on(instance) group_left(nodename) node_uname_info)",
+          "expr": "topk(15, (sum by (instance) (libvirt_domain_info_maximum_memory_bytes{source=\"$source\", instance=~\"$instance\"} and on (instance, domain) libvirt_domain_info_state{source=\"$source\", instance=~\"$instance\"} == 1) / on (instance) node_memory_MemTotal_bytes{source=\"$source\", instance=~\"$instance\"}) * on(instance) group_left(nodename) node_uname_info{source=\"$source\"})",
           "instant": true,
           "range": false,
           "legendFormat": "{{nodename}}",
@@ -557,7 +579,7 @@
             "uid": "${DS_PROMETHEUS}"
           },
           "refId": "A",
-          "expr": "100 * (1 - avg by (instance) (rate(node_cpu_seconds_total{mode=\"idle\", instance=~\"$instance\"}[$__rate_interval]))) * on(instance) group_left(nodename) node_uname_info",
+          "expr": "100 * (1 - avg by (instance) (rate(node_cpu_seconds_total{mode=\"idle\", source=\"$source\", instance=~\"$instance\"}[$__rate_interval]))) * on(instance) group_left(nodename) node_uname_info{source=\"$source\"}",
           "editorMode": "code",
           "range": true,
           "legendFormat": "{{nodename}}"
@@ -621,7 +643,7 @@
             "uid": "${DS_PROMETHEUS}"
           },
           "refId": "A",
-          "expr": "100 * (1 - node_memory_MemAvailable_bytes{instance=~\"$instance\"} / node_memory_MemTotal_bytes{instance=~\"$instance\"}) * on(instance) group_left(nodename) node_uname_info",
+          "expr": "100 * (1 - node_memory_MemAvailable_bytes{source=\"$source\", instance=~\"$instance\"} / node_memory_MemTotal_bytes{source=\"$source\", instance=~\"$instance\"}) * on(instance) group_left(nodename) node_uname_info{source=\"$source\"}",
           "editorMode": "code",
           "range": true,
           "legendFormat": "{{nodename}}"
@@ -685,7 +707,7 @@
             "uid": "${DS_PROMETHEUS}"
           },
           "refId": "A",
-          "expr": "(count by (instance) (libvirt_domain_info_state{instance=~\"$instance\"} == 1) or on (instance) 0 * count by (instance) (node_uname_info{instance=~\"$instance\"})) * on(instance) group_left(nodename) node_uname_info",
+          "expr": "(count by (instance) (libvirt_domain_info_state{source=\"$source\", instance=~\"$instance\"} == 1) or on (instance) 0 * count by (instance) (node_uname_info{source=\"$source\", instance=~\"$instance\"})) * on(instance) group_left(nodename) node_uname_info{source=\"$source\"}",
           "editorMode": "code",
           "range": true,
           "legendFormat": "{{nodename}}"

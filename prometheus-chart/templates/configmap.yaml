@@ -22,10 +22,9 @@ data:
       - job_name: {{ $job.name }}
         static_configs:
           - targets: [{{ range $i, $h := $hosts }}{{ if $i }}, {{ end }}{{ printf "%s:%v" $h $job.port | quote }}{{ end }}]
-            {{- with $.Values.hostScrape.source }}
             labels:
-              source: {{ . | quote }}
-            {{- end }}
+              # the HVM dashboards only show series with this label
+              source: {{ $.Values.hostScrape.source | default "hvm" | quote }}
         relabel_configs:
           # instance = host address without the port, so node and libvirt metrics of one
           # host share the same instance value

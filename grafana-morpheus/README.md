@@ -142,10 +142,15 @@ chosen on import.
 | `hvm-capacity.json` | same | vCPU : core and memory allocation per host, idle cores, available memory, 30 day trends |
 | `kubernetes-pods.json` | Prometheus of the HKS cluster | node-exporter, kube-state-metrics and kubelet metrics (kube-prometheus) |
 
+The HVM dashboards only show metrics that carry a `source` label, set on the scrape jobs of the HVM
+hosts (one value per environment, for example `enterprise` or `vme`; `prometheus-chart` sets it from
+`hostScrape.source`). The **Environment** variable picks the value, so other node_exporter targets in the
+same Prometheus stay out, and one Prometheus can hold the hosts of several environments.
+
 The dashboard links work by tag: `morpheus` (Morpheus Enterprise), `vme` (VM Essentials) and
-`morpheus-hvm` (the HVM dashboards, which link to both). Each HVM dashboard reads one Prometheus. To
-watch Enterprise and VM Essentials hosts in the same Grafana, import the HVM files twice, once for each
-Prometheus, into separate folders. Give the second copy a new uid and title in the import dialog.
+`morpheus-hvm` (the HVM dashboards, which link to both). If Enterprise and VM Essentials hosts sit in
+different Prometheus servers, import the HVM files once per Prometheus, into separate folders, and give
+the second copy a new uid and title in the import dialog.
 
 The three `hvm-*` dashboards expect node_exporter (9100) and prometheus-libvirt-exporter (9177) on
 every HVM host and a Prometheus with the jobs `node` and `libvirt` (see `prometheus-chart`, value

@@ -62,6 +62,28 @@
   "templating": {
     "list": [
       {
+        "name": "source",
+        "label": "Environment",
+        "type": "query",
+        "datasource": {
+          "type": "prometheus",
+          "uid": "${DS_PROMETHEUS}"
+        },
+        "description": "Value of the 'source' label on the HVM host scrape jobs",
+        "query": {
+          "qryType": 1,
+          "query": "label_values(node_uname_info, source)",
+          "refId": "source"
+        },
+        "definition": "label_values(node_uname_info, source)",
+        "refresh": 1,
+        "multi": false,
+        "includeAll": false,
+        "sort": 1,
+        "current": {},
+        "options": []
+      },
+      {
         "name": "host",
         "label": "Host",
         "type": "query",
@@ -71,10 +93,10 @@
         },
         "query": {
           "qryType": 1,
-          "query": "label_values(node_uname_info, nodename)",
+          "query": "label_values(node_uname_info{source=\"$source\"}, nodename)",
           "refId": "host"
         },
-        "definition": "label_values(node_uname_info, nodename)",
+        "definition": "label_values(node_uname_info{source=\"$source\"}, nodename)",
         "refresh": 2,
         "multi": true,
         "includeAll": true,
@@ -101,10 +123,10 @@
         "hide": 2,
         "query": {
           "qryType": 1,
-          "query": "label_values(node_uname_info{nodename=~\"$host\"}, instance)",
+          "query": "label_values(node_uname_info{source=\"$source\", nodename=~\"$host\"}, instance)",
           "refId": "instance"
         },
-        "definition": "label_values(node_uname_info{nodename=~\"$host\"}, instance)",
+        "definition": "label_values(node_uname_info{source=\"$source\", nodename=~\"$host\"}, instance)",
         "refresh": 2,
         "multi": true,
         "includeAll": true,
@@ -129,10 +151,10 @@
         },
         "query": {
           "qryType": 1,
-          "query": "label_values(libvirt_domain_info_state{instance=~\"$instance\"}, domain)",
+          "query": "label_values(libvirt_domain_info_state{source=\"$source\", instance=~\"$instance\"}, domain)",
           "refId": "domain"
         },
-        "definition": "label_values(libvirt_domain_info_state{instance=~\"$instance\"}, domain)",
+        "definition": "label_values(libvirt_domain_info_state{source=\"$source\", instance=~\"$instance\"}, domain)",
         "refresh": 2,
         "multi": true,
         "includeAll": true,
@@ -179,7 +201,7 @@
             "uid": "${DS_PROMETHEUS}"
           },
           "refId": "A",
-          "expr": "100 * rate(node_pressure_cpu_waiting_seconds_total{instance=~\"$instance\"}[$__rate_interval]) * on(instance) group_left(nodename) node_uname_info",
+          "expr": "100 * rate(node_pressure_cpu_waiting_seconds_total{source=\"$source\", instance=~\"$instance\"}[$__rate_interval]) * on(instance) group_left(nodename) node_uname_info{source=\"$source\"}",
           "editorMode": "code",
           "range": true,
           "legendFormat": "{{nodename}}"
@@ -239,7 +261,7 @@
             "uid": "${DS_PROMETHEUS}"
           },
           "refId": "A",
-          "expr": "(node_load5{instance=~\"$instance\"} / on (instance) count by (instance) (node_cpu_seconds_total{mode=\"idle\", instance=~\"$instance\"})) * on(instance) group_left(nodename) node_uname_info",
+          "expr": "(node_load5{source=\"$source\", instance=~\"$instance\"} / on (instance) count by (instance) (node_cpu_seconds_total{mode=\"idle\", source=\"$source\", instance=~\"$instance\"})) * on(instance) group_left(nodename) node_uname_info{source=\"$source\"}",
           "editorMode": "code",
           "range": true,
           "legendFormat": "{{nodename}}"
@@ -299,7 +321,7 @@
             "uid": "${DS_PROMETHEUS}"
           },
           "refId": "A",
-          "expr": "topk(10, (100 * sum by (instance, domain) ((rate(libvirt_domain_vcpu_delay_seconds_total{instance=~\"$instance\", domain=~\"$domain\"}[$__rate_interval]) unless (resets(libvirt_domain_vcpu_delay_seconds_total{instance=~\"$instance\", domain=~\"$domain\"}[$__rate_interval]) > 0 or (min_over_time(libvirt_domain_vcpu_delay_seconds_total{instance=~\"$instance\", domain=~\"$domain\"}[$__rate_interval]) == 0 and max_over_time(libvirt_domain_vcpu_delay_seconds_total{instance=~\"$instance\", domain=~\"$domain\"}[$__rate_interval]) > 0)))) / on (instance, domain) libvirt_domain_info_virtual_cpus{instance=~\"$instance\", domain=~\"$domain\"}) * on(instance) group_left(nodename) node_uname_info)",
+          "expr": "topk(10, (100 * sum by (instance, domain) ((rate(libvirt_domain_vcpu_delay_seconds_total{source=\"$source\", instance=~\"$instance\", domain=~\"$domain\"}[$__rate_interval]) unless (resets(libvirt_domain_vcpu_delay_seconds_total{source=\"$source\", instance=~\"$instance\", domain=~\"$domain\"}[$__rate_interval]) > 0 or (min_over_time(libvirt_domain_vcpu_delay_seconds_total{source=\"$source\", instance=~\"$instance\", domain=~\"$domain\"}[$__rate_interval]) == 0 and max_over_time(libvirt_domain_vcpu_delay_seconds_total{source=\"$source\", instance=~\"$instance\", domain=~\"$domain\"}[$__rate_interval]) > 0)))) / on (instance, domain) libvirt_domain_info_virtual_cpus{source=\"$source\", instance=~\"$instance\", domain=~\"$domain\"}) * on(instance) group_left(nodename) node_uname_info{source=\"$source\"})",
           "range": true,
           "legendFormat": "{{domain}} ({{nodename}})",
           "editorMode": "code"
@@ -359,7 +381,7 @@
             "uid": "${DS_PROMETHEUS}"
           },
           "refId": "A",
-          "expr": "topk(15, (100 * sum by (instance, domain) ((rate(libvirt_domain_vcpu_delay_seconds_total{instance=~\"$instance\", domain=~\"$domain\"}[$__rate_interval]) unless (resets(libvirt_domain_vcpu_delay_seconds_total{instance=~\"$instance\", domain=~\"$domain\"}[$__rate_interval]) > 0 or (min_over_time(libvirt_domain_vcpu_delay_seconds_total{instance=~\"$instance\", domain=~\"$domain\"}[$__rate_interval]) == 0 and max_over_time(libvirt_domain_vcpu_delay_seconds_total{instance=~\"$instance\", domain=~\"$domain\"}[$__rate_interval]) > 0)))) / on (instance, domain) libvirt_domain_info_virtual_cpus{instance=~\"$instance\", domain=~\"$domain\"}) * on(instance) group_left(nodename) node_uname_info)",
+          "expr": "topk(15, (100 * sum by (instance, domain) ((rate(libvirt_domain_vcpu_delay_seconds_total{source=\"$source\", instance=~\"$instance\", domain=~\"$domain\"}[$__rate_interval]) unless (resets(libvirt_domain_vcpu_delay_seconds_total{source=\"$source\", instance=~\"$instance\", domain=~\"$domain\"}[$__rate_interval]) > 0 or (min_over_time(libvirt_domain_vcpu_delay_seconds_total{source=\"$source\", instance=~\"$instance\", domain=~\"$domain\"}[$__rate_interval]) == 0 and max_over_time(libvirt_domain_vcpu_delay_seconds_total{source=\"$source\", instance=~\"$instance\", domain=~\"$domain\"}[$__rate_interval]) > 0)))) / on (instance, domain) libvirt_domain_info_virtual_cpus{source=\"$source\", instance=~\"$instance\", domain=~\"$domain\"}) * on(instance) group_left(nodename) node_uname_info{source=\"$source\"})",
           "instant": true,
           "range": false,
           "legendFormat": "{{domain}} ({{nodename}})",
@@ -411,7 +433,7 @@
             "uid": "${DS_PROMETHEUS}"
           },
           "refId": "A",
-          "expr": "topk(15, 100 * (1 - avg by (instance) (rate(node_cpu_seconds_total{mode=\"idle\", instance=~\"$instance\"}[$__rate_interval]))) * on(instance) group_left(nodename) node_uname_info)",
+          "expr": "topk(15, 100 * (1 - avg by (instance) (rate(node_cpu_seconds_total{mode=\"idle\", source=\"$source\", instance=~\"$instance\"}[$__rate_interval]))) * on(instance) group_left(nodename) node_uname_info{source=\"$source\"})",
           "instant": true,
           "range": false,
           "legendFormat": "{{nodename}}",
@@ -477,7 +499,7 @@
             "uid": "${DS_PROMETHEUS}"
           },
           "refId": "A",
-          "expr": "100 * rate(node_pressure_memory_waiting_seconds_total{instance=~\"$instance\"}[$__rate_interval]) * on(instance) group_left(nodename) node_uname_info",
+          "expr": "100 * rate(node_pressure_memory_waiting_seconds_total{source=\"$source\", instance=~\"$instance\"}[$__rate_interval]) * on(instance) group_left(nodename) node_uname_info{source=\"$source\"}",
           "editorMode": "code",
           "range": true,
           "legendFormat": "{{nodename}} some"
@@ -488,7 +510,7 @@
             "uid": "${DS_PROMETHEUS}"
           },
           "refId": "B",
-          "expr": "100 * rate(node_pressure_memory_stalled_seconds_total{instance=~\"$instance\"}[$__rate_interval]) * on(instance) group_left(nodename) node_uname_info",
+          "expr": "100 * rate(node_pressure_memory_stalled_seconds_total{source=\"$source\", instance=~\"$instance\"}[$__rate_interval]) * on(instance) group_left(nodename) node_uname_info{source=\"$source\"}",
           "editorMode": "code",
           "range": true,
           "legendFormat": "{{nodename}} full"
@@ -548,7 +570,7 @@
             "uid": "${DS_PROMETHEUS}"
           },
           "refId": "A",
-          "expr": "100 * (1 - node_memory_MemAvailable_bytes{instance=~\"$instance\"} / node_memory_MemTotal_bytes{instance=~\"$instance\"}) * on(instance) group_left(nodename) node_uname_info",
+          "expr": "100 * (1 - node_memory_MemAvailable_bytes{source=\"$source\", instance=~\"$instance\"} / node_memory_MemTotal_bytes{source=\"$source\", instance=~\"$instance\"}) * on(instance) group_left(nodename) node_uname_info{source=\"$source\"}",
           "editorMode": "code",
           "range": true,
           "legendFormat": "{{nodename}}"
@@ -610,7 +632,7 @@
             "uid": "${DS_PROMETHEUS}"
           },
           "refId": "A",
-          "expr": "(node_memory_SwapTotal_bytes{instance=~\"$instance\"} - node_memory_SwapFree_bytes{instance=~\"$instance\"}) * on(instance) group_left(nodename) node_uname_info",
+          "expr": "(node_memory_SwapTotal_bytes{source=\"$source\", instance=~\"$instance\"} - node_memory_SwapFree_bytes{source=\"$source\", instance=~\"$instance\"}) * on(instance) group_left(nodename) node_uname_info{source=\"$source\"}",
           "editorMode": "code",
           "range": true,
           "legendFormat": "{{nodename}}"
@@ -670,7 +692,7 @@
             "uid": "${DS_PROMETHEUS}"
           },
           "refId": "A",
-          "expr": "topk(10, ((rate(libvirt_domain_memory_stats_swap_in_bytes{instance=~\"$instance\", domain=~\"$domain\"}[$__rate_interval]) unless (resets(libvirt_domain_memory_stats_swap_in_bytes{instance=~\"$instance\", domain=~\"$domain\"}[$__rate_interval]) > 0 or (min_over_time(libvirt_domain_memory_stats_swap_in_bytes{instance=~\"$instance\", domain=~\"$domain\"}[$__rate_interval]) == 0 and max_over_time(libvirt_domain_memory_stats_swap_in_bytes{instance=~\"$instance\", domain=~\"$domain\"}[$__rate_interval]) > 0))) + (rate(libvirt_domain_memory_stats_swap_out_bytes{instance=~\"$instance\", domain=~\"$domain\"}[$__rate_interval]) unless (resets(libvirt_domain_memory_stats_swap_out_bytes{instance=~\"$instance\", domain=~\"$domain\"}[$__rate_interval]) > 0 or (min_over_time(libvirt_domain_memory_stats_swap_out_bytes{instance=~\"$instance\", domain=~\"$domain\"}[$__rate_interval]) == 0 and max_over_time(libvirt_domain_memory_stats_swap_out_bytes{instance=~\"$instance\", domain=~\"$domain\"}[$__rate_interval]) > 0)))) * on(instance) group_left(nodename) node_uname_info)",
+          "expr": "topk(10, ((rate(libvirt_domain_memory_stats_swap_in_bytes{source=\"$source\", instance=~\"$instance\", domain=~\"$domain\"}[$__rate_interval]) unless (resets(libvirt_domain_memory_stats_swap_in_bytes{source=\"$source\", instance=~\"$instance\", domain=~\"$domain\"}[$__rate_interval]) > 0 or (min_over_time(libvirt_domain_memory_stats_swap_in_bytes{source=\"$source\", instance=~\"$instance\", domain=~\"$domain\"}[$__rate_interval]) == 0 and max_over_time(libvirt_domain_memory_stats_swap_in_bytes{source=\"$source\", instance=~\"$instance\", domain=~\"$domain\"}[$__rate_interval]) > 0))) + (rate(libvirt_domain_memory_stats_swap_out_bytes{source=\"$source\", instance=~\"$instance\", domain=~\"$domain\"}[$__rate_interval]) unless (resets(libvirt_domain_memory_stats_swap_out_bytes{source=\"$source\", instance=~\"$instance\", domain=~\"$domain\"}[$__rate_interval]) > 0 or (min_over_time(libvirt_domain_memory_stats_swap_out_bytes{source=\"$source\", instance=~\"$instance\", domain=~\"$domain\"}[$__rate_interval]) == 0 and max_over_time(libvirt_domain_memory_stats_swap_out_bytes{source=\"$source\", instance=~\"$instance\", domain=~\"$domain\"}[$__rate_interval]) > 0)))) * on(instance) group_left(nodename) node_uname_info{source=\"$source\"})",
           "range": true,
           "legendFormat": "{{domain}} ({{nodename}})",
           "editorMode": "code"
@@ -730,7 +752,7 @@
             "uid": "${DS_PROMETHEUS}"
           },
           "refId": "A",
-          "expr": "topk(10, ((rate(libvirt_domain_memory_stats_major_fault_total{instance=~\"$instance\", domain=~\"$domain\"}[$__rate_interval]) unless (resets(libvirt_domain_memory_stats_major_fault_total{instance=~\"$instance\", domain=~\"$domain\"}[$__rate_interval]) > 0 or (min_over_time(libvirt_domain_memory_stats_major_fault_total{instance=~\"$instance\", domain=~\"$domain\"}[$__rate_interval]) == 0 and max_over_time(libvirt_domain_memory_stats_major_fault_total{instance=~\"$instance\", domain=~\"$domain\"}[$__rate_interval]) > 0)))) * on(instance) group_left(nodename) node_uname_info)",
+          "expr": "topk(10, ((rate(libvirt_domain_memory_stats_major_fault_total{source=\"$source\", instance=~\"$instance\", domain=~\"$domain\"}[$__rate_interval]) unless (resets(libvirt_domain_memory_stats_major_fault_total{source=\"$source\", instance=~\"$instance\", domain=~\"$domain\"}[$__rate_interval]) > 0 or (min_over_time(libvirt_domain_memory_stats_major_fault_total{source=\"$source\", instance=~\"$instance\", domain=~\"$domain\"}[$__rate_interval]) == 0 and max_over_time(libvirt_domain_memory_stats_major_fault_total{source=\"$source\", instance=~\"$instance\", domain=~\"$domain\"}[$__rate_interval]) > 0)))) * on(instance) group_left(nodename) node_uname_info{source=\"$source\"})",
           "range": true,
           "legendFormat": "{{domain}} ({{nodename}})",
           "editorMode": "code"
@@ -803,7 +825,7 @@
             "uid": "${DS_PROMETHEUS}"
           },
           "refId": "A",
-          "expr": "100 * rate(node_pressure_io_waiting_seconds_total{instance=~\"$instance\"}[$__rate_interval]) * on(instance) group_left(nodename) node_uname_info",
+          "expr": "100 * rate(node_pressure_io_waiting_seconds_total{source=\"$source\", instance=~\"$instance\"}[$__rate_interval]) * on(instance) group_left(nodename) node_uname_info{source=\"$source\"}",
           "editorMode": "code",
           "range": true,
           "legendFormat": "{{nodename}} some"
@@ -814,7 +836,7 @@
             "uid": "${DS_PROMETHEUS}"
           },
           "refId": "B",
-          "expr": "100 * rate(node_pressure_io_stalled_seconds_total{instance=~\"$instance\"}[$__rate_interval]) * on(instance) group_left(nodename) node_uname_info",
+          "expr": "100 * rate(node_pressure_io_stalled_seconds_total{source=\"$source\", instance=~\"$instance\"}[$__rate_interval]) * on(instance) group_left(nodename) node_uname_info{source=\"$source\"}",
           "editorMode": "code",
           "range": true,
           "legendFormat": "{{nodename}} full"
@@ -874,7 +896,7 @@
             "uid": "${DS_PROMETHEUS}"
           },
           "refId": "A",
-          "expr": "max by (instance) (rate(node_disk_io_time_seconds_total{instance=~\"$instance\", device!~\"dm-.*|sr.*|md.*|loop.*|ram.*\"}[$__rate_interval])) * on(instance) group_left(nodename) node_uname_info",
+          "expr": "max by (instance) (rate(node_disk_io_time_seconds_total{source=\"$source\", instance=~\"$instance\", device!~\"dm-.*|sr.*|md.*|loop.*|ram.*\"}[$__rate_interval])) * on(instance) group_left(nodename) node_uname_info{source=\"$source\"}",
           "editorMode": "code",
           "range": true,
           "legendFormat": "{{nodename}}"
@@ -936,7 +958,7 @@
             "uid": "${DS_PROMETHEUS}"
           },
           "refId": "A",
-          "expr": "(sum by (instance) (rate(node_disk_read_time_seconds_total{instance=~\"$instance\", device!~\"dm-.*|sr.*|md.*|loop.*|ram.*\"}[$__rate_interval])) / sum by (instance) (rate(node_disk_reads_completed_total{instance=~\"$instance\", device!~\"dm-.*|sr.*|md.*|loop.*|ram.*\"}[$__rate_interval]))) * on(instance) group_left(nodename) node_uname_info",
+          "expr": "(sum by (instance) (rate(node_disk_read_time_seconds_total{source=\"$source\", instance=~\"$instance\", device!~\"dm-.*|sr.*|md.*|loop.*|ram.*\"}[$__rate_interval])) / sum by (instance) (rate(node_disk_reads_completed_total{source=\"$source\", instance=~\"$instance\", device!~\"dm-.*|sr.*|md.*|loop.*|ram.*\"}[$__rate_interval]))) * on(instance) group_left(nodename) node_uname_info{source=\"$source\"}",
           "editorMode": "code",
           "range": true,
           "legendFormat": "{{nodename}} read"
@@ -947,7 +969,7 @@
             "uid": "${DS_PROMETHEUS}"
           },
           "refId": "B",
-          "expr": "(sum by (instance) (rate(node_disk_write_time_seconds_total{instance=~\"$instance\", device!~\"dm-.*|sr.*|md.*|loop.*|ram.*\"}[$__rate_interval])) / sum by (instance) (rate(node_disk_writes_completed_total{instance=~\"$instance\", device!~\"dm-.*|sr.*|md.*|loop.*|ram.*\"}[$__rate_interval]))) * on(instance) group_left(nodename) node_uname_info",
+          "expr": "(sum by (instance) (rate(node_disk_write_time_seconds_total{source=\"$source\", instance=~\"$instance\", device!~\"dm-.*|sr.*|md.*|loop.*|ram.*\"}[$__rate_interval])) / sum by (instance) (rate(node_disk_writes_completed_total{source=\"$source\", instance=~\"$instance\", device!~\"dm-.*|sr.*|md.*|loop.*|ram.*\"}[$__rate_interval]))) * on(instance) group_left(nodename) node_uname_info{source=\"$source\"}",
           "editorMode": "code",
           "range": true,
           "legendFormat": "{{nodename}} write"
@@ -1007,7 +1029,7 @@
             "uid": "${DS_PROMETHEUS}"
           },
           "refId": "A",
-          "expr": "topk(10, (sum by (instance, domain) ((rate(libvirt_domain_block_stats_write_time_seconds_total{instance=~\"$instance\", domain=~\"$domain\"}[$__rate_interval]) unless (resets(libvirt_domain_block_stats_write_time_seconds_total{instance=~\"$instance\", domain=~\"$domain\"}[$__rate_interval]) > 0 or (min_over_time(libvirt_domain_block_stats_write_time_seconds_total{instance=~\"$instance\", domain=~\"$domain\"}[$__rate_interval]) == 0 and max_over_time(libvirt_domain_block_stats_write_time_seconds_total{instance=~\"$instance\", domain=~\"$domain\"}[$__rate_interval]) > 0)))) / sum by (instance, domain) ((rate(libvirt_domain_block_stats_write_requests_total{instance=~\"$instance\", domain=~\"$domain\"}[$__rate_interval]) unless (resets(libvirt_domain_block_stats_write_requests_total{instance=~\"$instance\", domain=~\"$domain\"}[$__rate_interval]) > 0 or (min_over_time(libvirt_domain_block_stats_write_requests_total{instance=~\"$instance\", domain=~\"$domain\"}[$__rate_interval]) == 0 and max_over_time(libvirt_domain_block_stats_write_requests_total{instance=~\"$instance\", domain=~\"$domain\"}[$__rate_interval]) > 0))))) * on(instance) group_left(nodename) node_uname_info)",
+          "expr": "topk(10, (sum by (instance, domain) ((rate(libvirt_domain_block_stats_write_time_seconds_total{source=\"$source\", instance=~\"$instance\", domain=~\"$domain\"}[$__rate_interval]) unless (resets(libvirt_domain_block_stats_write_time_seconds_total{source=\"$source\", instance=~\"$instance\", domain=~\"$domain\"}[$__rate_interval]) > 0 or (min_over_time(libvirt_domain_block_stats_write_time_seconds_total{source=\"$source\", instance=~\"$instance\", domain=~\"$domain\"}[$__rate_interval]) == 0 and max_over_time(libvirt_domain_block_stats_write_time_seconds_total{source=\"$source\", instance=~\"$instance\", domain=~\"$domain\"}[$__rate_interval]) > 0)))) / sum by (instance, domain) ((rate(libvirt_domain_block_stats_write_requests_total{source=\"$source\", instance=~\"$instance\", domain=~\"$domain\"}[$__rate_interval]) unless (resets(libvirt_domain_block_stats_write_requests_total{source=\"$source\", instance=~\"$instance\", domain=~\"$domain\"}[$__rate_interval]) > 0 or (min_over_time(libvirt_domain_block_stats_write_requests_total{source=\"$source\", instance=~\"$instance\", domain=~\"$domain\"}[$__rate_interval]) == 0 and max_over_time(libvirt_domain_block_stats_write_requests_total{source=\"$source\", instance=~\"$instance\", domain=~\"$domain\"}[$__rate_interval]) > 0))))) * on(instance) group_left(nodename) node_uname_info{source=\"$source\"})",
           "range": true,
           "legendFormat": "{{domain}} ({{nodename}})",
           "editorMode": "code"
@@ -1067,7 +1089,7 @@
             "uid": "${DS_PROMETHEUS}"
           },
           "refId": "A",
-          "expr": "topk(10, (sum by (instance, domain) ((rate(libvirt_domain_block_stats_write_requests_total{instance=~\"$instance\", domain=~\"$domain\"}[$__rate_interval]) unless (resets(libvirt_domain_block_stats_write_requests_total{instance=~\"$instance\", domain=~\"$domain\"}[$__rate_interval]) > 0 or (min_over_time(libvirt_domain_block_stats_write_requests_total{instance=~\"$instance\", domain=~\"$domain\"}[$__rate_interval]) == 0 and max_over_time(libvirt_domain_block_stats_write_requests_total{instance=~\"$instance\", domain=~\"$domain\"}[$__rate_interval]) > 0))))) * on(instance) group_left(nodename) node_uname_info)",
+          "expr": "topk(10, (sum by (instance, domain) ((rate(libvirt_domain_block_stats_write_requests_total{source=\"$source\", instance=~\"$instance\", domain=~\"$domain\"}[$__rate_interval]) unless (resets(libvirt_domain_block_stats_write_requests_total{source=\"$source\", instance=~\"$instance\", domain=~\"$domain\"}[$__rate_interval]) > 0 or (min_over_time(libvirt_domain_block_stats_write_requests_total{source=\"$source\", instance=~\"$instance\", domain=~\"$domain\"}[$__rate_interval]) == 0 and max_over_time(libvirt_domain_block_stats_write_requests_total{source=\"$source\", instance=~\"$instance\", domain=~\"$domain\"}[$__rate_interval]) > 0))))) * on(instance) group_left(nodename) node_uname_info{source=\"$source\"})",
           "range": true,
           "legendFormat": "{{domain}} ({{nodename}})",
           "editorMode": "code"
@@ -1140,7 +1162,7 @@
             "uid": "${DS_PROMETHEUS}"
           },
           "refId": "A",
-          "expr": "sum by (instance, device) (rate(node_network_receive_drop_total{instance=~\"$instance\", device!~\"lo|vnet.*|veth.*|tap.*|virbr.*|docker.*|br-.*|ovs.*|genev_sys.*|vxlan.*\"}[$__rate_interval]) + rate(node_network_transmit_drop_total{instance=~\"$instance\", device!~\"lo|vnet.*|veth.*|tap.*|virbr.*|docker.*|br-.*|ovs.*|genev_sys.*|vxlan.*\"}[$__rate_interval])) * on(instance) group_left(nodename) node_uname_info",
+          "expr": "sum by (instance, device) (rate(node_network_receive_drop_total{source=\"$source\", instance=~\"$instance\", device!~\"lo|vnet.*|veth.*|tap.*|virbr.*|docker.*|br-.*|ovs.*|genev_sys.*|vxlan.*\"}[$__rate_interval]) + rate(node_network_transmit_drop_total{source=\"$source\", instance=~\"$instance\", device!~\"lo|vnet.*|veth.*|tap.*|virbr.*|docker.*|br-.*|ovs.*|genev_sys.*|vxlan.*\"}[$__rate_interval])) * on(instance) group_left(nodename) node_uname_info{source=\"$source\"}",
           "editorMode": "code",
           "range": true,
           "legendFormat": "{{nodename}} {{device}}"
@@ -1200,7 +1222,7 @@
             "uid": "${DS_PROMETHEUS}"
           },
           "refId": "A",
-          "expr": "sum by (instance, device) (rate(node_network_receive_errs_total{instance=~\"$instance\", device!~\"lo|vnet.*|veth.*|tap.*|virbr.*|docker.*|br-.*|ovs.*|genev_sys.*|vxlan.*\"}[$__rate_interval]) + rate(node_network_transmit_errs_total{instance=~\"$instance\", device!~\"lo|vnet.*|veth.*|tap.*|virbr.*|docker.*|br-.*|ovs.*|genev_sys.*|vxlan.*\"}[$__rate_interval])) * on(instance) group_left(nodename) node_uname_info",
+          "expr": "sum by (instance, device) (rate(node_network_receive_errs_total{source=\"$source\", instance=~\"$instance\", device!~\"lo|vnet.*|veth.*|tap.*|virbr.*|docker.*|br-.*|ovs.*|genev_sys.*|vxlan.*\"}[$__rate_interval]) + rate(node_network_transmit_errs_total{source=\"$source\", instance=~\"$instance\", device!~\"lo|vnet.*|veth.*|tap.*|virbr.*|docker.*|br-.*|ovs.*|genev_sys.*|vxlan.*\"}[$__rate_interval])) * on(instance) group_left(nodename) node_uname_info{source=\"$source\"}",
           "editorMode": "code",
           "range": true,
           "legendFormat": "{{nodename}} {{device}}"
@@ -1260,7 +1282,7 @@
             "uid": "${DS_PROMETHEUS}"
           },
           "refId": "A",
-          "expr": "topk(10, (sum by (instance, domain) ((rate(libvirt_domain_interface_stats_receive_drops_total{instance=~\"$instance\", domain=~\"$domain\"}[$__rate_interval]) unless (resets(libvirt_domain_interface_stats_receive_drops_total{instance=~\"$instance\", domain=~\"$domain\"}[$__rate_interval]) > 0 or (min_over_time(libvirt_domain_interface_stats_receive_drops_total{instance=~\"$instance\", domain=~\"$domain\"}[$__rate_interval]) == 0 and max_over_time(libvirt_domain_interface_stats_receive_drops_total{instance=~\"$instance\", domain=~\"$domain\"}[$__rate_interval]) > 0))) + (rate(libvirt_domain_interface_stats_transmit_drops_total{instance=~\"$instance\", domain=~\"$domain\"}[$__rate_interval]) unless (resets(libvirt_domain_interface_stats_transmit_drops_total{instance=~\"$instance\", domain=~\"$domain\"}[$__rate_interval]) > 0 or (min_over_time(libvirt_domain_interface_stats_transmit_drops_total{instance=~\"$instance\", domain=~\"$domain\"}[$__rate_interval]) == 0 and max_over_time(libvirt_domain_interface_stats_transmit_drops_total{instance=~\"$instance\", domain=~\"$domain\"}[$__rate_interval]) > 0))))) * on(instance) group_left(nodename) node_uname_info)",
+          "expr": "topk(10, (sum by (instance, domain) ((rate(libvirt_domain_interface_stats_receive_drops_total{source=\"$source\", instance=~\"$instance\", domain=~\"$domain\"}[$__rate_interval]) unless (resets(libvirt_domain_interface_stats_receive_drops_total{source=\"$source\", instance=~\"$instance\", domain=~\"$domain\"}[$__rate_interval]) > 0 or (min_over_time(libvirt_domain_interface_stats_receive_drops_total{source=\"$source\", instance=~\"$instance\", domain=~\"$domain\"}[$__rate_interval]) == 0 and max_over_time(libvirt_domain_interface_stats_receive_drops_total{source=\"$source\", instance=~\"$instance\", domain=~\"$domain\"}[$__rate_interval]) > 0))) + (rate(libvirt_domain_interface_stats_transmit_drops_total{source=\"$source\", instance=~\"$instance\", domain=~\"$domain\"}[$__rate_interval]) unless (resets(libvirt_domain_interface_stats_transmit_drops_total{source=\"$source\", instance=~\"$instance\", domain=~\"$domain\"}[$__rate_interval]) > 0 or (min_over_time(libvirt_domain_interface_stats_transmit_drops_total{source=\"$source\", instance=~\"$instance\", domain=~\"$domain\"}[$__rate_interval]) == 0 and max_over_time(libvirt_domain_interface_stats_transmit_drops_total{source=\"$source\", instance=~\"$instance\", domain=~\"$domain\"}[$__rate_interval]) > 0))))) * on(instance) group_left(nodename) node_uname_info{source=\"$source\"})",
           "range": true,
           "legendFormat": "{{domain}} ({{nodename}})",
           "editorMode": "code"
@@ -1320,7 +1342,7 @@
             "uid": "${DS_PROMETHEUS}"
           },
           "refId": "A",
-          "expr": "topk(10, (sum by (instance, domain) ((rate(libvirt_domain_interface_stats_receive_bytes_total{instance=~\"$instance\", domain=~\"$domain\"}[$__rate_interval]) unless (resets(libvirt_domain_interface_stats_receive_bytes_total{instance=~\"$instance\", domain=~\"$domain\"}[$__rate_interval]) > 0 or (min_over_time(libvirt_domain_interface_stats_receive_bytes_total{instance=~\"$instance\", domain=~\"$domain\"}[$__rate_interval]) == 0 and max_over_time(libvirt_domain_interface_stats_receive_bytes_total{instance=~\"$instance\", domain=~\"$domain\"}[$__rate_interval]) > 0))))) * on(instance) group_left(nodename) node_uname_info)",
+          "expr": "topk(10, (sum by (instance, domain) ((rate(libvirt_domain_interface_stats_receive_bytes_total{source=\"$source\", instance=~\"$instance\", domain=~\"$domain\"}[$__rate_interval]) unless (resets(libvirt_domain_interface_stats_receive_bytes_total{source=\"$source\", instance=~\"$instance\", domain=~\"$domain\"}[$__rate_interval]) > 0 or (min_over_time(libvirt_domain_interface_stats_receive_bytes_total{source=\"$source\", instance=~\"$instance\", domain=~\"$domain\"}[$__rate_interval]) == 0 and max_over_time(libvirt_domain_interface_stats_receive_bytes_total{source=\"$source\", instance=~\"$instance\", domain=~\"$domain\"}[$__rate_interval]) > 0))))) * on(instance) group_left(nodename) node_uname_info{source=\"$source\"})",
           "range": true,
           "legendFormat": "{{domain}} ({{nodename}})",
           "editorMode": "code"
@@ -1380,7 +1402,7 @@
             "uid": "${DS_PROMETHEUS}"
           },
           "refId": "A",
-          "expr": "topk(10, (sum by (instance, domain) ((rate(libvirt_domain_interface_stats_transmit_bytes_total{instance=~\"$instance\", domain=~\"$domain\"}[$__rate_interval]) unless (resets(libvirt_domain_interface_stats_transmit_bytes_total{instance=~\"$instance\", domain=~\"$domain\"}[$__rate_interval]) > 0 or (min_over_time(libvirt_domain_interface_stats_transmit_bytes_total{instance=~\"$instance\", domain=~\"$domain\"}[$__rate_interval]) == 0 and max_over_time(libvirt_domain_interface_stats_transmit_bytes_total{instance=~\"$instance\", domain=~\"$domain\"}[$__rate_interval]) > 0))))) * on(instance) group_left(nodename) node_uname_info)",
+          "expr": "topk(10, (sum by (instance, domain) ((rate(libvirt_domain_interface_stats_transmit_bytes_total{source=\"$source\", instance=~\"$instance\", domain=~\"$domain\"}[$__rate_interval]) unless (resets(libvirt_domain_interface_stats_transmit_bytes_total{source=\"$source\", instance=~\"$instance\", domain=~\"$domain\"}[$__rate_interval]) > 0 or (min_over_time(libvirt_domain_interface_stats_transmit_bytes_total{source=\"$source\", instance=~\"$instance\", domain=~\"$domain\"}[$__rate_interval]) == 0 and max_over_time(libvirt_domain_interface_stats_transmit_bytes_total{source=\"$source\", instance=~\"$instance\", domain=~\"$domain\"}[$__rate_interval]) > 0))))) * on(instance) group_left(nodename) node_uname_info{source=\"$source\"})",
           "range": true,
           "legendFormat": "{{domain}} ({{nodename}})",
           "editorMode": "code"

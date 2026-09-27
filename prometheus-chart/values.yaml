@@ -26,8 +26,9 @@ hostScrape:
   # Comma-separated host addresses (IP or DNS name, no port), e.g. "10.0.0.11,10.0.0.12".
   # Empty = no host jobs.
   hosts: ""
-  # Value of the 'source' label on every host metric, to tell several environments apart
-  # when one Grafana reads more than one Prometheus (e.g. vme, enterprise).
+  # Value of the 'source' label on every host metric (e.g. vme, enterprise). The HVM dashboards
+  # only show series with this label and pick the value in their Environment variable, so several
+  # environments can share one Prometheus. Empty = "hvm".
   source: ""
   nodeExporterPort: 9100
   libvirtExporterPort: 9177
