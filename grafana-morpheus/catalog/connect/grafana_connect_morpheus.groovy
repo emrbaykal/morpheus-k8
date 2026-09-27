@@ -10,6 +10,8 @@ import java.security.cert.X509Certificate
 
 // =============================================================================
 // grafana_connect_morpheus.groovy  (v1.8.0 - dashboards from the published JSON files)
+// fix:    data sources are updated through /api/datasources/uid/<uid>; Grafana 13 answers
+//         404 on the numeric-id path, so a second run failed on an existing data source.
 // v1.8.0: the dashboards are no longer built in this script. The task downloads the
 //         published JSON files (Dashboard Source URL, default the morpheus-k8
 //         repository on GitHub) and imports them with Grafana's import API, so the
@@ -262,9 +264,9 @@ def dsBody = [
 def (gCode, gJson, gBody) = grafana("GET", "/api/datasources/name/" + URLEncoder.encode(DS_NAME, "UTF-8"), null)
 def dsUid
 def dsAction
-if (gCode == 200 && gJson?.id) {
+if (gCode == 200 && gJson?.uid) {
     dsBody.uid = gJson.uid
-    def (uCode, uJson, uBody) = grafana("PUT", "/api/datasources/" + gJson.id, dsBody)
+    def (uCode, uJson, uBody) = grafana("PUT", "/api/datasources/uid/" + gJson.uid, dsBody)
     if (uCode >= 400) {
         throw new RuntimeException("Updating data source '${DS_NAME}' failed (HTTP ${uCode}): ${apiMsg(uJson, uBody)}")
     }
@@ -313,9 +315,9 @@ def upsertPrometheus = { String name, String url ->
     def body = [name: name, type: "prometheus", access: "proxy", url: url, jsonData: [timeInterval: "30s"]]
     def (gc, gj, gb) = grafana("GET", "/api/datasources/name/" + URLEncoder.encode(name, "UTF-8"), null)
     def uid = null
-    if (gc == 200 && gj?.id) {
+    if (gc == 200 && gj?.uid) {
         body.uid = gj.uid
-        def (uc, uj, ub) = grafana("PUT", "/api/datasources/" + gj.id, body)
+        def (uc, uj, ub) = grafana("PUT", "/api/datasources/uid/" + gj.uid, body)
         if (uc < 400) { uid = gj.uid }
     } else {
         def (cc, cj, cb) = grafana("POST", "/api/datasources", body)
