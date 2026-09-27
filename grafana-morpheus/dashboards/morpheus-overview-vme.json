@@ -26,7 +26,6 @@
   "uid": "vme-overview",
   "title": "VM Essentials Overview",
   "tags": [
-    "morpheus",
     "vme"
   ],
   "timezone": "browser",
@@ -2142,10 +2141,10 @@
     {
       "type": "dashboards",
       "tags": [
-        "morpheus"
+        "vme"
       ],
       "asDropdown": true,
-      "title": "Morpheus dashboards"
+      "title": "VM Essentials dashboards"
     }
   ]
 }

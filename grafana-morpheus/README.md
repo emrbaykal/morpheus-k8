@@ -42,7 +42,7 @@ Turns a Grafana from this catalog into a Morpheus dashboard. One workflow, two G
 | File | Morpheus object |
 |---|---|
 | `setup/grafana_setup_reader.groovy` (v1.1.2) | Task 1: create or repair role "Grafana Reader", OAuth client `grafana` (token lifetime from the form) and the reader user. A missing user is created (typed password, or a random one when the field is empty); an existing user is never created again and its password changes only when one is typed. The password is kept in Cypher `secret/<user>-password`. Ends with a login test |
-| `connect/grafana_connect_morpheus.groovy` (v1.8.0) | Task 2: renew the reader user's token (password from Cypher `secret/<user>-password`, token written to `secret/<user>-token`), install the Infinity data source plugin, create/update data source "Morpheus" (Bearer token in Grafana's encrypted secureJsonData), create/update the Prometheus data sources that answer, then import the published dashboard JSON files from `dashboards/` (Dashboard Source URL) |
+| `connect/grafana_connect_morpheus.groovy` (v1.8.2) | Task 2: renew the reader user's token (password from Cypher `secret/<user>-password`, token written to `secret/<user>-token`), install the Infinity data source plugin, create/update data source "Morpheus" (Bearer token in Grafana's encrypted secureJsonData), create/update the Prometheus data sources that answer, then import the published dashboard JSON files from `dashboards/` (Dashboard Source URL) |
 | `connect/form.json` | Form: Grafana App (option list "Helm Apps"), Grafana Admin Password (stored in Cypher `secret/grafana-admin/<app>`; may be left empty afterwards), Prometheus URL (Kubernetes cluster), HVM Hosts Prometheus URL, Morpheus URL, Reader Username (default `grafana-reader`), Reader Password (optional), Token lifetime (days), Dashboard Source URL |
 
 The setup task needs Roles, Users, Clients and Cypher rights, so this item is ordered by a
@@ -68,6 +68,12 @@ v1.4.0 adds per-cloud "Virtual machines" tables and, when the in-cluster kube-pr
 `http://prometheus-k8s.monitoring.svc:9090`, data source "Prometheus HKS" plus a second dashboard
 "Kubernetes Pods" (node CPU/memory, pod CPU, memory, network, PVC usage over time; namespace
 filter). Prometheus keeps 1 day of data on this cluster.
+
+## v1.8.2 - re-run fixes
+
+A second run updates existing data sources through `/api/datasources/uid/<uid>` (Grafana 13 answers
+404 on the numeric-id path), and data source names with spaces are looked up with `%20`, so a re-run
+no longer skips the HVM dashboards.
 
 ## v1.8.0 - dashboards from the published files
 
@@ -135,6 +141,11 @@ chosen on import.
 | `hvm-bottlenecks.json` | same | PSI (CPU, memory, I/O), load per core, vCPU wait, swap and page faults, disk busy and latency, noisy neighbours, drops and errors |
 | `hvm-capacity.json` | same | vCPU : core and memory allocation per host, idle cores, available memory, 30 day trends |
 | `kubernetes-pods.json` | Prometheus of the HKS cluster | node-exporter, kube-state-metrics and kubelet metrics (kube-prometheus) |
+
+The dashboard links work by tag: `morpheus` (Morpheus Enterprise), `vme` (VM Essentials) and
+`morpheus-hvm` (the HVM dashboards, which link to both). Each HVM dashboard reads one Prometheus. To
+watch Enterprise and VM Essentials hosts in the same Grafana, import the HVM files twice, once for each
+Prometheus, into separate folders. Give the second copy a new uid and title in the import dialog.
 
 The three `hvm-*` dashboards expect node_exporter (9100) and prometheus-libvirt-exporter (9177) on
 every HVM host and a Prometheus with the jobs `node` and `libvirt` (see `prometheus-chart`, value

@@ -49,6 +49,14 @@
       ],
       "asDropdown": true,
       "title": "Morpheus dashboards"
+    },
+    {
+      "type": "dashboards",
+      "tags": [
+        "vme"
+      ],
+      "asDropdown": true,
+      "title": "VM Essentials dashboards"
     }
   ],
   "templating": {

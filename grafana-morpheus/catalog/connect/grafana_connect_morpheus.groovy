@@ -9,8 +9,8 @@ import javax.net.ssl.SSLSession
 import java.security.cert.X509Certificate
 
 // =============================================================================
-// grafana_connect_morpheus.groovy  (v1.8.0 - dashboards from the published JSON files)
-// fix:    data sources are updated through /api/datasources/uid/<uid>; Grafana 13 answers
+// grafana_connect_morpheus.groovy  (v1.8.2 - dashboards from the published JSON files)
+// v1.8.2: data sources are updated through /api/datasources/uid/<uid>; Grafana 13 answers
 //         404 on the numeric-id path, so a second run failed on an existing data source.
 //         Data source names in URL paths encode a space as %20 (was '+', so a name with
 //         spaces was not found and a re-run skipped the HVM dashboards).
