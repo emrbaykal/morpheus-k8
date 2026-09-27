@@ -13,6 +13,27 @@ data:
       - job_name: prometheus
         static_configs:
           - targets: ["localhost:9090"]
+      {{- $hosts := list }}
+      {{- range (splitList "," (.Values.hostScrape.hosts | default "")) }}
+      {{- if trim . }}{{ $hosts = append $hosts (trim .) }}{{ end }}
+      {{- end }}
+      {{- if $hosts }}
+      {{- range $job := list (dict "name" "node" "port" .Values.hostScrape.nodeExporterPort) (dict "name" "libvirt" "port" .Values.hostScrape.libvirtExporterPort) }}
+      - job_name: {{ $job.name }}
+        static_configs:
+          - targets: [{{ range $i, $h := $hosts }}{{ if $i }}, {{ end }}{{ printf "%s:%v" $h $job.port | quote }}{{ end }}]
+            {{- with $.Values.hostScrape.source }}
+            labels:
+              source: {{ . | quote }}
+            {{- end }}
+        relabel_configs:
+          # instance = host address without the port, so node and libvirt metrics of one
+          # host share the same instance value
+          - source_labels: [__address__]
+            regex: '(.+):\d+'
+            target_label: instance
+      {{- end }}
+      {{- end }}
       {{- if .Values.morpheusScrape.enabled }}
       - job_name: morpheus
         scrape_interval: {{ .Values.morpheusScrape.interval | default "15s" }}

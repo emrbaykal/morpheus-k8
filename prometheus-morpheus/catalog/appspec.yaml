@@ -37,6 +37,9 @@ templateParameter:
       enabled: true
       storageClassName: <%= customOptions.storageClass %>
       size: <%= customOptions.storageSize %>Gi
+    hostScrape:
+      hosts: '<%= customOptions.hostAddresses ?: '' %>'
+      source: '<%= customOptions.hostSource ?: '' %>'
     morpheusScrape:
       enabled: <%= customOptions.morpheusScrape?.toString() in ['on', 'true'] %>
       url: '<%= customOptions.morpheusUrl ?: '' %>'

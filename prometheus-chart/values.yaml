@@ -20,6 +20,18 @@ resources:
 
 scrapeInterval: 30s
 
+# HVM hosts to scrape. Each host runs node_exporter (host CPU, memory, disk, network,
+# pressure) and prometheus-libvirt-exporter (per-VM CPU, vCPU delay, memory, disk, network).
+hostScrape:
+  # Comma-separated host addresses (IP or DNS name, no port), e.g. "10.0.0.11,10.0.0.12".
+  # Empty = no host jobs.
+  hosts: ""
+  # Value of the 'source' label on every host metric, to tell several environments apart
+  # when one Grafana reads more than one Prometheus (e.g. vme, enterprise).
+  source: ""
+  nodeExporterPort: 9100
+  libvirtExporterPort: 9177
+
 # Optional: read Morpheus (or a VM Essentials manager) through its REST API and keep
 # per-server CPU, memory, storage, network and IOPS as time series. Only the samples
 # written by the Morpheus agent are exported, so a hypervisor-only sample leaves a gap

@@ -126,6 +126,28 @@
     "displayOrder": 9
    },
    {
+    "fieldName": "hostAddresses",
+    "fieldLabel": "HVM Host Addresses",
+    "fieldContext": "config.customOptions",
+    "type": "text",
+    "required": false,
+    "placeHolder": "10.0.0.11,10.0.0.12",
+    "verifyPattern": "^[A-Za-z0-9.:\\-]+(\\s*,\\s*[A-Za-z0-9.:\\-]+)*$|^$",
+    "helpBlock": "Comma-separated addresses of the HVM hosts that run node_exporter (9100) and prometheus-libvirt-exporter (9177). Empty = no host metrics.",
+    "displayOrder": 10
+   },
+   {
+    "fieldName": "hostSource",
+    "fieldLabel": "Environment Label",
+    "fieldContext": "config.customOptions",
+    "type": "text",
+    "required": false,
+    "placeHolder": "vme",
+    "verifyPattern": "^[a-z0-9-]{0,30}$",
+    "helpBlock": "Value of the 'source' label on the host metrics, to tell environments apart in Grafana (e.g. vme, enterprise).",
+    "displayOrder": 11
+   },
+   {
     "fieldName": "morpheusScrape",
     "fieldLabel": "Collect Morpheus VM stats",
     "fieldContext": "config.customOptions",
@@ -133,7 +155,7 @@
     "required": false,
     "defaultValue": "off",
     "helpBlock": "Adds a json-exporter that reads /api/servers of a Morpheus or VM Essentials manager and keeps per-server CPU, memory, disk and network as time series.",
-    "displayOrder": 10
+    "displayOrder": 12
    },
    {
     "fieldName": "morpheusUrl",
@@ -144,7 +166,7 @@
     "placeHolder": "https://morpheus.example.com",
     "verifyPattern": "^(https?://[A-Za-z0-9.:-]+/?)?$",
     "helpBlock": "Only when the box above is ticked. Base URL of the Morpheus or VM Essentials manager to read.",
-    "displayOrder": 11
+    "displayOrder": 13
    },
    {
     "fieldName": "morpheusToken",
@@ -154,7 +176,7 @@
     "required": false,
     "verifyPattern": "^[A-Za-z0-9-]*$",
     "helpBlock": "Only when the box above is ticked. Token of a read-only user with Compute = Read.",
-    "displayOrder": 12
+    "displayOrder": 14
    },
    {
     "fieldName": "morpheusName",
@@ -165,7 +187,7 @@
     "defaultValue": "morpheus",
     "verifyPattern": "^[a-z0-9-]{1,30}$",
     "helpBlock": "Value of the 'morpheus' label on the metrics, to tell sources apart.",
-    "displayOrder": 13
+    "displayOrder": 15
    }
   ]
  }
