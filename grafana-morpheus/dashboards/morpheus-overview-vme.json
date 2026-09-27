@@ -93,7 +93,7 @@
       },
       {
         "name": "cloud",
-        "label": "Cloud",
+        "label": "Cloud (with VMs)",
         "type": "query",
         "datasource": {
           "type": "yesoreyeram-infinity-datasource",
@@ -107,20 +107,20 @@
             "source": "url",
             "parser": "backend",
             "format": "table",
-            "url": "/api/zones?max=100",
+            "url": "/api/servers?vm=true&max=2000",
             "url_options": {
               "method": "GET",
               "data": ""
             },
-            "root_selector": "zones",
+            "root_selector": "servers",
             "columns": [
               {
-                "selector": "name",
+                "selector": "zone.name",
                 "text": "__text",
                 "type": "string"
               },
               {
-                "selector": "id",
+                "selector": "zone.id",
                 "text": "__value",
                 "type": "string"
               }
@@ -129,7 +129,7 @@
           "query": "",
           "refId": "A"
         },
-        "definition": "Infinity /api/zones?max=100",
+        "definition": "Infinity /api/servers?vm=true (clouds that have VMs)",
         "refresh": 1,
         "multi": true,
         "includeAll": true,
@@ -142,7 +142,8 @@
           ]
         },
         "sort": 1,
-        "options": []
+        "options": [],
+        "description": "Clouds that have at least one virtual machine; one VM table per selected cloud."
       }
     ]
   },
